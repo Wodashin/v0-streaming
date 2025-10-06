@@ -27,25 +27,9 @@ export default async function Home() {
     .from("accounts")
     .select(`
       *,
-      customers (
-        id,
-        name,
-        phone,
-        email
-      ),
-      streaming_services (
-        id,
-        name,
-        default_user_capacity
-      ),
-      account_users (
-        id,
-        user_name,
-        user_email,
-        user_phone,
-        profile_name,
-        is_primary
-      )
+      customers ( id, name, phone, email ),
+      streaming_services ( id, name, default_user_capacity ),
+      account_users ( id, user_name, user_email, user_phone, profile_name, is_primary )
     `)
     .order("expiration_date", { ascending: true })
 
@@ -70,10 +54,11 @@ export default async function Home() {
                 Servicios
               </Button>
             </ManageServicesDialog>
+            {/* CAMBIO: El texto del botón ahora es "Nuevo Usuario" */}
             <AddCustomerDialog>
               <Button variant="outline" size="sm">
                 <Users className="h-4 w-4 mr-2" />
-                Nuevo Cliente
+                Nuevo Usuario
               </Button>
             </AddCustomerDialog>
             <AddAccountDialog services={services || []}>
@@ -92,14 +77,10 @@ export default async function Home() {
         </div>
 
         <StatsCards accounts={accounts || []} />
-
         <InactiveUsersPanel />
-
-        {accounts && accounts.length > 0 && <NotificationsPanel />}
-
+        <NotificationsPanel />
         <AccountsTable accounts={accounts || []} customers={customers || []} services={services || []} />
-
-        {accounts && accounts.length > 0 && <NotificationHistory />}
+        <NotificationHistory />
       </div>
     </div>
   )
