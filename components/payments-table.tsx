@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { formatDate } from "@/lib/utils/date-utils"
 import { Search, DollarSign } from "lucide-react"
 
-// Definimos un tipo más específico para los pagos con los datos de las cuentas
+// --- CAMBIO AQUÍ: Actualizamos el tipo para incluir el nombre del cliente ---
 type PaymentWithAccount = {
   id: string;
   payment_date: string;
@@ -15,10 +15,9 @@ type PaymentWithAccount = {
   payment_method: string | null;
   accounts: {
     account_email: string | null;
-    streaming_services: {
-      name: string;
-    } | null;
+    streaming_services: { name: string; } | null;
   } | null;
+  customers: { name: string; } | null; // El usuario que pagó
 };
 
 interface PaymentsTableProps {
@@ -34,11 +33,14 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
       const serviceName = payment.accounts?.streaming_services?.name?.toLowerCase() || '';
       const accountEmail = payment.accounts?.account_email?.toLowerCase() || '';
       const paymentMethod = payment.payment_method?.toLowerCase() || '';
+      // Añadimos el nombre del cliente a la búsqueda
+      const customerName = payment.customers?.name?.toLowerCase() || '';
 
       return (
         serviceName.includes(lowerCaseSearchTerm) ||
         accountEmail.includes(lowerCaseSearchTerm) ||
-        paymentMethod.includes(lowerCaseSearchTerm)
+        paymentMethod.includes(lowerCaseSearchTerm) ||
+        customerName.includes(lowerCaseSearchTerm)
       );
     });
   }, [payments, searchTerm]);
@@ -55,7 +57,7 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
             <div className="relative flex-1 md:max-w-xs">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                placeholder="Buscar por servicio, email o método..."
+                placeholder="Buscar por usuario, servicio, email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
@@ -69,6 +71,8 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>Fecha</TableHead>
+                {/* --- CAMBIO AQUÍ: Añadimos la columna "Pagado por" --- */}
+                <TableHead>Pagado por</TableHead>
                 <TableHead>Servicio</TableHead>
                 <TableHead>Email de Cuenta</TableHead>
                 <TableHead>Método</TableHead>
@@ -80,6 +84,8 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
                 filteredPayments.map((payment) => (
                   <TableRow key={payment.id}>
                     <TableCell>{formatDate(payment.payment_date)}</TableCell>
+                    {/* --- CAMBIO AQUÍ: Mostramos el nombre del usuario --- */}
+                    <TableCell>{payment.customers?.name || <span className="text-muted-foreground italic">Anónimo</span>}</TableCell>
                     <TableCell className="font-medium">{payment.accounts?.streaming_services?.name || 'N/A'}</TableCell>
                     <TableCell>{payment.accounts?.account_email || 'N/A'}</TableCell>
                     <TableCell>{payment.payment_method || 'No especificado'}</TableCell>
@@ -88,7 +94,7 @@ export function PaymentsTable({ payments }: PaymentsTableProps) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     No se encontraron pagos.
                   </TableCell>
                 </TableRow>
