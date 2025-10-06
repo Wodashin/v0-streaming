@@ -33,15 +33,18 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
   const [serviceFilter, setServiceFilter] = useState<string>("all")
 
   const filteredAccounts = accounts.filter((account) => {
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    
     const customerName = account.customers?.name?.toLowerCase() || '';
     const serviceName = account.streaming_services?.name?.toLowerCase() || '';
     const customerPhone = account.customers?.phone || '';
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    const credentials = account.credentials?.toLowerCase() || '';
 
     const matchesSearch =
       customerName.includes(lowerCaseSearchTerm) ||
       serviceName.includes(lowerCaseSearchTerm) ||
-      customerPhone.includes(searchTerm);
+      customerPhone.includes(searchTerm) ||
+      credentials.includes(lowerCaseSearchTerm); // Añadido para buscar por credenciales
 
     const matchesStatus = statusFilter === "all" || account.status === statusFilter
     const matchesService = serviceFilter === "all" || account.service_id === serviceFilter
@@ -76,7 +79,7 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar por cliente, servicio o teléfono..."
+              placeholder="Buscar por cliente, servicio, teléfono o email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -113,7 +116,7 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Cliente</TableHead>
+                <TableHead>Cliente / Cuenta</TableHead>
                 <TableHead>Servicio</TableHead>
                 <TableHead>Teléfono</TableHead>
                 <TableHead>Usuarios</TableHead>
@@ -138,7 +141,10 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
                   return (
                     <TableRow key={account.id}>
                       <TableCell className="font-medium">
-                        {account.customers?.name || <span className="text-xs text-muted-foreground italic">Sin cliente</span>}
+                        {/* LÓGICA MEJORADA DE VISUALIZACIÓN */}
+                        {account.customers?.name || 
+                         (account.credentials ? <span className="text-foreground">{account.credentials.split('/')[0].trim()}</span> : 
+                         <span className="text-xs text-muted-foreground italic">Sin cliente</span>)}
                       </TableCell>
                       <TableCell>{account.streaming_services?.name}</TableCell>
                       <TableCell>{account.customers?.phone || <span className="text-xs text-muted-foreground italic">N/A</span>}</TableCell>
