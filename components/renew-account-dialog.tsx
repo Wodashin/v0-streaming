@@ -33,14 +33,13 @@ export function RenewAccountDialog({ account, children }: RenewAccountDialogProp
     setLoading(true)
     const supabase = createClient()
 
-    // Lógica principal: la nueva fecha de inicio es la fecha de vencimiento actual.
-    // La duración se mantiene igual que la original de la cuenta.
     const { error } = await supabase
       .from("accounts")
       .update({
-        start_date: account.expiration_date, // La nueva fecha de inicio es el vencimiento actual
-        duration_days: account.duration_days,   // Mantenemos la duración original
-        status: 'active' // Se asegura de que la cuenta se reactive si estaba vencida
+        start_date: account.expiration_date,
+        duration_days: account.duration_days,
+        status: 'active',
+        payment_status: 'pending' // <-- IMPORTANTE: Reinicia el estado del pago
       })
       .eq("id", account.id)
 
@@ -61,10 +60,11 @@ export function RenewAccountDialog({ account, children }: RenewAccountDialogProp
       console.error("Error renewing account:", error)
     }
   }
-
-  // Calcula la nueva fecha de vencimiento para mostrarla en el diálogo
+  
   const currentExpirationDate = new Date(account.expiration_date);
-  const newExpirationDate = new Date(currentExpirationDate.setDate(currentExpirationDate.getDate() + account.duration_days));
+  const newStartDate = new Date(currentExpirationDate); // La fecha de vencimiento actual se convierte en la nueva de inicio
+  const newExpirationDate = new Date(newStartDate.setDate(newStartDate.getDate() + account.duration_days));
+
 
   return (
     <AlertDialog>
@@ -73,12 +73,11 @@ export function RenewAccountDialog({ account, children }: RenewAccountDialogProp
         <AlertDialogHeader>
           <AlertDialogTitle>¿Renovar la cuenta de {account.streaming_services?.name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            Esto extenderá la suscripción por otros **{account.duration_days} días** a partir de la fecha de vencimiento actual.
-            <br />
-            <br />
-            Fecha de vencimiento actual: **{formatDate(account.expiration_date)}**
-            <br />
-            Nueva fecha de vencimiento: **{formatDate(newExpirationDate.toISOString())}**
+            Esto extenderá la suscripción por otros **{account.duration_days} días**. El estado del pago se marcará como **pendiente**.
+            <div className="mt-4 text-sm space-y-1">
+                <p>Fecha de vencimiento actual: <span className="font-semibold">{formatDate(account.expiration_date)}</span></p>
+                <p>Nueva fecha de vencimiento: <span className="font-semibold">{formatDate(newExpirationDate.toISOString())}</span></p>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
