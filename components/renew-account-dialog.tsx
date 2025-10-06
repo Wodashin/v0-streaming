@@ -39,7 +39,9 @@ export function RenewAccountDialog({ account, children }: RenewAccountDialogProp
         start_date: account.expiration_date,
         duration_days: account.duration_days,
         status: 'active',
-        payment_status: 'pending' // <-- IMPORTANTE: Reinicia el estado del pago
+        // --- CORRECCIÓN AQUÍ ---
+        // Se reinicia el estado del pago a 'pendiente' en cada renovación.
+        payment_status: 'pending' 
       })
       .eq("id", account.id)
 
@@ -60,9 +62,11 @@ export function RenewAccountDialog({ account, children }: RenewAccountDialogProp
       console.error("Error renewing account:", error)
     }
   }
-  
+
+  // Calcula la nueva fecha de vencimiento para mostrarla en el diálogo
   const currentExpirationDate = new Date(account.expiration_date);
-  const newStartDate = new Date(currentExpirationDate); // La fecha de vencimiento actual se convierte en la nueva de inicio
+  // Clonar la fecha para no mutar la original
+  const newStartDate = new Date(currentExpirationDate.getTime()); 
   const newExpirationDate = new Date(newStartDate.setDate(newStartDate.getDate() + account.duration_days));
 
 
