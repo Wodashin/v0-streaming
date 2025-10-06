@@ -44,7 +44,8 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
       start_date: formData.get("start_date") as string,
       duration_days: Number.parseInt(formData.get("duration_days") as string),
       user_capacity: Number.parseInt(formData.get("user_capacity") as string),
-      credentials: (formData.get("credentials") as string) || null,
+      // CAMBIO: Ahora el campo 'credentials' guarda el email de la cuenta.
+      credentials: (formData.get("account_email") as string) || null,
       notes: (formData.get("notes") as string) || null,
     })
 
@@ -54,6 +55,9 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
       setOpen(false)
       setSelectedService(null)
       router.refresh()
+    } else {
+      console.error("Error creating account:", error);
+      alert("Hubo un error al crear la cuenta.");
     }
   }
 
@@ -63,8 +67,8 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
       <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Nueva Cuenta</DialogTitle>
-            <DialogDescription>Crea una nueva cuenta de streaming. Podrás agregar usuarios después.</DialogDescription>
+            <DialogTitle>Nueva Cuenta de Streaming</DialogTitle>
+            <DialogDescription>Crea una nueva cuenta compartida. Podrás agregar usuarios después.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -89,22 +93,31 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* CAMBIO: Se cambió "Credenciales" por "Email de la Cuenta" */}
             <div className="grid gap-2">
-              <Label htmlFor="user_capacity">Capacidad de Usuarios</Label>
-              <Input
-                id="user_capacity"
-                name="user_capacity"
-                type="number"
-                min="1"
-                defaultValue={selectedService?.default_user_capacity || 1}
-                key={selectedService?.id || "default"}
-                required
-              />
-              {selectedService && (
-                <p className="text-xs text-muted-foreground">
-                  Capacidad por defecto para {selectedService.name}: {selectedService.default_user_capacity} usuarios
-                </p>
-              )}
+              <Label htmlFor="account_email">Email de la Cuenta</Label>
+              <Input id="account_email" name="account_email" type="email" placeholder="ejemplo@servicio.com" required />
+              <p className="text-xs text-muted-foreground">Este es el email con el que se accede al servicio (ej. Netflix).</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="user_capacity">Capacidad</Label>
+                    <Input
+                        id="user_capacity"
+                        name="user_capacity"
+                        type="number"
+                        min="1"
+                        defaultValue={selectedService?.default_user_capacity || 1}
+                        key={selectedService?.id || "default"}
+                        required
+                    />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="duration_days">Duración (días)</Label>
+                    <Input id="duration_days" name="duration_days" type="number" min="1" defaultValue="30" required />
+                </div>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="start_date">Fecha de Inicio</Label>
@@ -116,17 +129,10 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
                 required
               />
             </div>
+            
             <div className="grid gap-2">
-              <Label htmlFor="duration_days">Duración (días)</Label>
-              <Input id="duration_days" name="duration_days" type="number" min="1" defaultValue="30" required />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="credentials">Credenciales</Label>
-              <Input id="credentials" name="credentials" placeholder="usuario@ejemplo.com / contraseña" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="notes">Notas</Label>
-              <Textarea id="notes" name="notes" placeholder="Notas adicionales..." rows={3} />
+              <Label htmlFor="notes">Notas (Opcional)</Label>
+              <Textarea id="notes" name="notes" placeholder="Contraseña, detalles de facturación, etc." rows={2} />
             </div>
           </div>
           <DialogFooter>
