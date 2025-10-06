@@ -30,6 +30,22 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [serviceFilter, setServiceFilter] = useState<string>("all")
 
+  const getAccountPaymentStatus = (account: Account) => {
+    if (!account.account_users || account.account_users.length === 0) {
+      return { text: 'N/A', variant: 'outline' as const };
+    }
+    
+    const paidCount = account.account_users.filter(u => u.payment_status === 'paid').length;
+    
+    if (paidCount === account.account_users.length) {
+      return { text: 'Pagado', variant: 'default' as const };
+    }
+    if (paidCount > 0) {
+      return { text: `Parcial (${paidCount}/${account.account_users.length})`, variant: 'secondary' as const };
+    }
+    return { text: 'Pendiente', variant: 'destructive' as const };
+  };
+
   const filteredAccounts = accounts.filter((account) => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     const customerName = account.customers?.name?.toLowerCase() || '';
@@ -116,6 +132,8 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
                 filteredAccounts.map((account) => {
                   const daysLeft = getDaysUntilExpiration(account.expiration_date)
                   const userCount = account.account_users?.length || 0
+                  const paymentStatus = getAccountPaymentStatus(account);
+
                   return (
                     <TableRow key={account.id}>
                       <TableCell className="font-medium">{account.account_email || <span className="text-xs text-muted-foreground italic">Sin email</span>}</TableCell>
@@ -137,8 +155,8 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={account.payment_status === 'paid' ? 'default' : 'destructive'} className="capitalize">
-                          {account.payment_status}
+                        <Badge variant={paymentStatus.variant} className="capitalize">
+                          {paymentStatus.text}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
