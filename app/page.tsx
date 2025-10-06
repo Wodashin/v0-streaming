@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+import Link from "next/link" // <-- Asegúrate de que Link esté importado
 import { AccountsTable } from "@/components/accounts-table"
 import { StatsCards } from "@/components/stats-cards"
 import { NotificationsPanel } from "@/components/notifications-panel"
@@ -9,7 +10,7 @@ import { AddCustomerDialog } from "@/components/add-customer-dialog"
 import { ManageServicesDialog } from "@/components/manage-services-dialog"
 import { UserSearchDialog } from "@/components/user-search-dialog"
 import { Button } from "@/components/ui/button"
-import { Plus, Users, Settings, LogOut } from "lucide-react"
+import { Plus, Users, Settings, LogOut, Landmark } from "lucide-react" // <-- Importa el ícono Landmark
 import { InactiveUsersPanel } from "@/components/inactive-users-panel"
 import { DashboardCharts } from "@/components/dashboard-charts"
 
@@ -41,13 +42,19 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-muted/40">
       <div className="container mx-auto p-4 sm:p-6 space-y-8">
-        {/* === BLOQUE DE ENCABEZADO RESTAURADO === */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Panel de Cuentas</h1>
             <p className="text-muted-foreground mt-1">Gestiona tus cuentas de streaming y notificaciones</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {/* --- BOTÓN NUEVO AQUÍ --- */}
+            <Button asChild variant="outline">
+              <Link href="/payments">
+                <Landmark className="h-4 w-4 mr-2" />
+                Historial de Pagos
+              </Link>
+            </Button>
             <UserSearchDialog />
             <ManageServicesDialog services={services || []}>
               <Button variant="outline"><Settings className="h-4 w-4 mr-2" />Servicios</Button>
@@ -63,7 +70,6 @@ export default async function Home() {
             </form>
           </div>
         </div>
-        {/* === FIN DEL BLOQUE RESTAURADO === */}
 
         <StatsCards accounts={accounts || []} />
         
