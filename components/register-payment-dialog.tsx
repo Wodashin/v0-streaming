@@ -4,19 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import type { Account } from "@/lib/types";
+import type { Account, Customer } from "@/lib/types"; // Importar Customer
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Importar Select
 
 interface RegisterPaymentDialogProps {
   account: Account;
+  customers: Customer[]; // Necesitamos la lista de todos los clientes/usuarios
   children: React.ReactNode;
 }
 
-export function RegisterPaymentDialog({ account, children }: RegisterPaymentDialogProps) {
+export function RegisterPaymentDialog({ account, customers, children }: RegisterPaymentDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -28,9 +30,12 @@ export function RegisterPaymentDialog({ account, children }: RegisterPaymentDial
 
     const formData = new FormData(e.currentTarget);
     const supabase = createClient();
+    const userId = formData.get("user_id") as string;
 
     const { error: paymentError } = await supabase.from("payments").insert({
       account_id: account.id,
+      // --- CAMBIO AQUÍ: Guardamos el ID del usuario que pagó ---
+      user_id: userId === "null" ? null : userId,
       amount: Number(formData.get("amount")),
       payment_date: formData.get("payment_date") as string,
       payment_method: formData.get("payment_method") as string,
@@ -44,7 +49,6 @@ export function RegisterPaymentDialog({ account, children }: RegisterPaymentDial
       return;
     }
 
-    // Actualizar el estado de pago de la cuenta a 'paid'
     const { error: accountError } = await supabase
       .from("accounts")
       .update({ payment_status: 'paid' })
@@ -55,7 +59,7 @@ export function RegisterPaymentDialog({ account, children }: RegisterPaymentDial
     if (accountError) {
         toast({ title: "Advertencia", description: "Pago registrado, pero no se pudo actualizar el estado de la cuenta." });
     } else {
-        toast({ title: "¡Pago Registrado!", description: `Se registró el pago para la cuenta ${account.streaming_services?.name}.` });
+        toast({ title: "¡Pago Registrado!", description: `Se registró el pago para la cuenta de ${account.streaming_services?.name}.` });
     }
     
     setOpen(false);
@@ -74,6 +78,25 @@ export function RegisterPaymentDialog({ account, children }: RegisterPaymentDial
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            
+            {/* --- CAMBIO AQUÍ: Añadimos un selector de usuario --- */}
+            <div className="grid gap-2">
+              <Label htmlFor="user_id">Pagado por</Label>
+              <Select name="user_id" defaultValue={account.customer_id || "null"}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona el usuario que pagó" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="null">Anónimo / No especificado</SelectItem>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="amount">Monto</Label>
               <Input id="amount" name="amount" type="number" step="0.01" placeholder="10.00" required />
