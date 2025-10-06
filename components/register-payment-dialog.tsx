@@ -5,7 +5,17 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Account, AccountUser } from "@/lib/types";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+// --- LA CORRECCIÓN ESTÁ AQUÍ ---
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogDescription, 
+    DialogFooter, // <-- Se añade la importación que faltaba
+    DialogHeader, 
+    DialogTitle, 
+    DialogTrigger 
+} from "@/components/ui/dialog";
+// ------------------------------
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, Check, Loader2 } from "lucide-react";
@@ -30,10 +40,10 @@ export function RegisterPaymentDialog({ account, children }: RegisterPaymentDial
     // 1. Registrar el pago en la tabla 'payments'
     const { error: paymentError } = await supabase.from("payments").insert({
       account_id: account.id,
-      user_id: user.id, // Esto funciona porque la FK es ON DELETE SET NULL
+      user_id: user.id,
       amount: price,
       payment_date: new Date().toISOString().split("T")[0],
-      payment_method: 'Manual' // Puedes cambiar esto si es necesario
+      payment_method: 'Manual'
     });
 
     if (paymentError) {
