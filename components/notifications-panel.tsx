@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Bell, Send, RefreshCw, CheckCircle, XCircle, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-// Interfaz actualizada para reflejar los cambios del backend
 interface Notification {
   accountId: string
   users: { name: string; phone: string }[]
@@ -33,7 +32,7 @@ export function NotificationsPanel() {
 
   const checkNotifications = async () => {
     setChecking(true)
-    setResults([]) // Limpiar resultados anteriores
+    setResults([]) 
     try {
       const response = await fetch("/api/notifications/check")
       const data = await response.json()
@@ -65,20 +64,58 @@ export function NotificationsPanel() {
   }
 
   const getNotificationTypeLabel = (type: string) => {
-    // ... (sin cambios)
+    switch (type) {
+      case "5_days": return "5 días"
+      case "3_days": return "3 días"
+      case "1_day": return "1 día"
+      case "expired": return "Vencida"
+      default: return type
+    }
   }
 
   const getNotificationTypeBadge = (type: string) => {
-    // ... (sin cambios)
+    switch (type) {
+      case "5_days": return "bg-blue-500/10 text-blue-700 dark:text-blue-400"
+      case "3_days": return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
+      case "1_day": return "bg-orange-500/10 text-orange-700 dark:text-orange-400"
+      case "expired": return "bg-red-500/10 text-red-700 dark:text-red-400"
+      default: return "bg-gray-500/10 text-gray-700 dark:text-gray-400"
+    }
   }
 
   return (
     <Card>
       <CardHeader>
-        {/* ... (sin cambios en el header) ... */}
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Sistema de Notificaciones
+            </CardTitle>
+            <CardDescription className="mt-2">Verifica y envía notificaciones automáticas por WhatsApp</CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={checkNotifications} disabled={checking}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${checking ? "animate-spin" : ""}`} />
+              Verificar
+            </Button>
+            {notifications.length > 0 && (
+              <Button size="sm" onClick={sendNotifications} disabled={loading}>
+                <Send className="h-4 w-4 mr-2" />
+                Enviar Todas ({notifications.length})
+              </Button>
+            )}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        {/* ... (sin cambios en el estado inicial) ... */}
+        {notifications.length === 0 && results.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No hay notificaciones pendientes</p>
+            <p className="text-sm mt-2">Haz clic en "Verificar" para buscar cuentas que necesiten notificación</p>
+          </div>
+        )}
 
         {notifications.length > 0 && (
           <div className="space-y-4">
@@ -88,7 +125,6 @@ export function NotificationsPanel() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-medium">{notification.serviceName}</p>
-                    {/* CORRECCIÓN AQUÍ: Mostramos el número de usuarios a notificar */}
                     <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
                       <Users className="h-4 w-4" />
                       <span>Se notificará a {notification.users.length} usuario(s)</span>
@@ -115,7 +151,7 @@ export function NotificationsPanel() {
                   {result.status === "sent" ? <CheckCircle className="h-5 w-5 text-green-600" /> : <XCircle className="h-5 w-5 text-red-600" />}
                   <div>
                     <p className="font-medium text-sm">{result.userName}</p>
-                    {result.error && <p className="text-xs text-red-600">{result.error}</p>}
+                    {result.error && <p className="text-xs text-red-600 max-w-xs truncate">{result.error}</p>}
                   </div>
                 </div>
                 <Badge variant={result.status === "sent" ? "default" : "destructive"}>
