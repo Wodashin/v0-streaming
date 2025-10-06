@@ -11,14 +11,12 @@ interface DashboardChartsProps {
   accounts: Account[]
 }
 
-// CAMBIO 1: Paleta de colores más vibrante y variada
 const COLORS = [
-  "#3b82f6", // blue-500
-  "#22c55e", // green-500
-  "#f97316", // orange-500
-  "#ec4899", // pink-500
-  "#8b5cf6", // violet-500
-  "#f43f5e", // rose-500
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
 ];
 
 export function DashboardCharts({ accounts }: DashboardChartsProps) {
@@ -54,12 +52,21 @@ export function DashboardCharts({ accounts }: DashboardChartsProps) {
     return Object.entries(serviceCount).map(([name, value]) => ({ name, value }))
   }, [accounts])
 
-  // CAMBIO 2: Se ajusta el estilo del Tooltip para que el texto sea visible
-  const tooltipStyle = {
-    backgroundColor: 'hsl(var(--card))',
-    border: '1px solid hsl(var(--border))',
-    borderRadius: '0.5rem',
-    color: 'hsl(var(--foreground))' // <-- Añadido para el color del texto
+  // CAMBIO: Se usan clases de Tailwind para asegurar la compatibilidad con el tema
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="rounded-lg border bg-card p-2 shadow-sm">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col space-y-1">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{label}</span>
+              <span className="font-bold text-foreground">{payload[0].value}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -74,8 +81,9 @@ export function DashboardCharts({ accounts }: DashboardChartsProps) {
             <BarChart data={expiringData}>
               <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-              <Tooltip cursor={{fill: 'hsl(var(--muted))'}} contentStyle={tooltipStyle} />
-              <Bar dataKey="Vencen" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              <Tooltip cursor={{fill: 'hsl(var(--muted))'}} content={<CustomTooltip />} />
+              {/* CAMBIO: Se usa un color del tema de gráficos para la barra */}
+              <Bar dataKey="Vencen" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -98,7 +106,7 @@ export function DashboardCharts({ accounts }: DashboardChartsProps) {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip content={<CustomTooltip />} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
