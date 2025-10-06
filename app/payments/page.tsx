@@ -16,7 +16,7 @@ export default async function PaymentsPage() {
     redirect("/auth/login")
   }
 
-  // Consulta para obtener todos los pagos con información relacionada
+  // --- CAMBIO AQUÍ: La consulta ahora también trae el nombre del usuario (customer) ---
   const { data: payments } = await supabase
     .from("payments")
     .select(`
@@ -24,7 +24,8 @@ export default async function PaymentsPage() {
       accounts (
         account_email,
         streaming_services (name)
-      )
+      ),
+      customers ( name ) 
     `)
     .order("payment_date", { ascending: false });
 
@@ -46,7 +47,6 @@ export default async function PaymentsPage() {
           </Button>
         </div>
 
-        {/* Pasamos los datos al nuevo componente de tabla */}
         <PaymentsTable payments={payments || []} />
       </div>
     </div>
