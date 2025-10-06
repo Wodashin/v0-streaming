@@ -15,13 +15,16 @@ export interface Customer {
 
 export interface Account {
   id: string
-  customer_id: string | null // customer_id ahora es opcional
+  customer_id: string | null
   service_id: string
   start_date: string
   duration_days: number
   expiration_date: string
   status: "active" | "expired" | "cancelled"
-  credentials: string | null
+  payment_status: "paid" | "pending" // Nuevo campo
+  account_email: string | null // Nuevo campo
+  account_password: string | null // Nuevo campo
+  account_pin: string | null // Nuevo campo
   notes: string | null
   user_capacity: number
   created_at: string
@@ -29,6 +32,7 @@ export interface Account {
   customers?: Customer
   streaming_services?: StreamingService
   account_users?: AccountUser[]
+  payments?: Payment[] // Nuevo campo
 }
 
 export interface AccountUser {
@@ -44,10 +48,23 @@ export interface AccountUser {
 }
 
 export interface Notification {
-  id: string
-  account_id: string
-  notification_type: "5_days" | "3_days" | "1_day" | "expired"
-  sent_at: string
-  status: "sent" | "failed"
-  error_message: string | null
+  // ... (sin cambios)
+}
+
+// NUEVOS TIPOS
+export interface Payment {
+    id: string;
+    account_id: string;
+    amount: number;
+    payment_date: string;
+    payment_method: string | null;
+    notes: string | null;
+}
+
+export interface AccountHistoryEvent {
+    id: number;
+    account_id: string;
+    event_type: string;
+    description: string;
+    created_at: string;
 }
