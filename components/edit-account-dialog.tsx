@@ -39,11 +39,13 @@ export function EditAccountDialog({ account, customers, services, children }: Ed
 
     const formData = new FormData(e.currentTarget)
     const supabase = createClient()
+    
+    const customerId = formData.get("customer_id") as string;
 
     const { error } = await supabase
       .from("accounts")
       .update({
-        customer_id: formData.get("customer_id") as string,
+        customer_id: customerId === "null" ? null : customerId,
         service_id: formData.get("service_id") as string,
         start_date: formData.get("start_date") as string,
         duration_days: Number.parseInt(formData.get("duration_days") as string),
@@ -58,6 +60,8 @@ export function EditAccountDialog({ account, customers, services, children }: Ed
     if (!error) {
       setOpen(false)
       router.refresh()
+    } else {
+      console.error("Error updating account:", error)
     }
   }
 
@@ -72,12 +76,13 @@ export function EditAccountDialog({ account, customers, services, children }: Ed
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="customer_id">Cliente</Label>
-              <Select name="customer_id" defaultValue={account.customer_id} required>
+              <Label htmlFor="customer_id">Cliente (Opcional)</Label>
+              <Select name="customer_id" defaultValue={account.customer_id || "null"}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecciona un cliente (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="null">Sin cliente asignado</SelectItem>
                   {customers.map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
                       {customer.name} - {customer.phone}
