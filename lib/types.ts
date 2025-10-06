@@ -2,6 +2,7 @@ export interface StreamingService {
   id: string
   name: string
   default_user_capacity: number
+  price_per_user?: number; // Campo para precio por usuario
   created_at: string
 }
 
@@ -21,10 +22,10 @@ export interface Account {
   duration_days: number
   expiration_date: string
   status: "active" | "expired" | "cancelled"
-  payment_status: "paid" | "pending" // Nuevo campo
-  account_email: string | null // Nuevo campo
-  account_password: string | null // Nuevo campo
-  account_pin: string | null // Nuevo campo
+  payment_status: "paid" | "pending"
+  account_email: string | null
+  account_password: string | null
+  account_pin: string | null
   notes: string | null
   user_capacity: number
   created_at: string
@@ -32,7 +33,7 @@ export interface Account {
   customers?: Customer
   streaming_services?: StreamingService
   account_users?: AccountUser[]
-  payments?: Payment[] // Nuevo campo
+  payments?: Payment[]
 }
 
 export interface AccountUser {
@@ -43,18 +44,24 @@ export interface AccountUser {
   user_phone: string | null
   profile_name: string | null
   is_primary: boolean
+  payment_status: "paid" | "pending"; // Campo para estado de pago
   created_at: string
   updated_at: string
 }
 
 export interface Notification {
-  // ... (sin cambios)
+  id: string
+  account_id: string
+  notification_type: "5_days" | "3_days" | "1_day" | "expired"
+  sent_at: string
+  status: "sent" | "failed"
+  error_message: string | null
 }
 
-// NUEVOS TIPOS
 export interface Payment {
     id: string;
     account_id: string;
+    user_id: string | null; // ID del 'customer' que pagó
     amount: number;
     payment_date: string;
     payment_method: string | null;
