@@ -30,14 +30,23 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
   const [message, setMessage] = useState("")
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
   const router = useRouter()
-  const daysLeft = getDaysUntilExpiration(account.expiration_date)
+  
+  // Verifica si el cliente existe. Si no, el diálogo no funcionará.
+  const customerExists = !!account.customers;
 
-  const defaultMessage =
-    daysLeft <= 0
+  const daysLeft = customerExists ? getDaysUntilExpiration(account.expiration_date) : 0;
+
+  const defaultMessage = customerExists
+    ? daysLeft <= 0
       ? `Hola ${account.customers?.name}, tu cuenta de ${account.streaming_services?.name} ha vencido. Ya no podrás acceder a esta cuenta. Contáctanos para renovar.`
       : `Hola ${account.customers?.name}, tu cuenta de ${account.streaming_services?.name} vence en ${daysLeft} día${daysLeft !== 1 ? "s" : ""}. Recuerda renovarla para seguir disfrutando del servicio.`
+    : ""
 
   const handleOpen = (isOpen: boolean) => {
+    if (!customerExists) {
+        alert("Esta cuenta no tiene un cliente asignado para enviar notificaciones.");
+        return;
+    }
     setOpen(isOpen)
     if (isOpen) {
       setMessage(defaultMessage)
@@ -46,6 +55,7 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
   }
 
   const handleSend = async () => {
+    if (!customerExists) return;
     setLoading(true)
     setResult(null)
 
@@ -90,43 +100,60 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Enviar Notificación</DialogTitle>
-          <DialogDescription>Enviar mensaje de WhatsApp a {account.customers?.name}</DialogDescription>
+          <DialogDescription>
+            {customerExists ? `Enviar mensaje de WhatsApp a ${account.customers?.name}` : "No se puede enviar la notificación"}
+          </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label>Teléfono</Label>
-            <div className="text-sm text-muted-foreground">{account.customers?.phone}</div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="message">Mensaje</Label>
-            <Textarea
-              id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={6}
-              className="resize-none"
-            />
-          </div>
-          {result && (
-            <div
-              className={`p-3 rounded-lg text-sm ${
-                result.success
-                  ? "bg-green-500/10 text-green-700 dark:text-green-400"
-                  : "bg-red-500/10 text-red-700 dark:text-red-400"
-              }`}
-            >
-              {result.message}
+        {customerExists ? (
+          <>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>Teléfono</Label>
+                <div className="text-sm text-muted-foreground">{account.customers?.phone}</div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="message">Mensaje</Label>
+                <Textarea
+                  id="message"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={6}
+                  className="resize-none"
+                />
+              </div>
+              {result && (
+                <div
+                  className={`p-3 rounded-lg text-sm ${
+                    result.success
+                      ? "bg-green-500/10 text-green-700 dark:text-green-400"
+                      : "bg-red-500/10 text-red-700 dark:text-red-400"
+                  }`}
+                >
+                  {result.message}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSend} disabled={loading}>
-            {loading ? "Enviando..." : "Enviar WhatsApp"}
-          </Button>
-        </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSend} disabled={loading}>
+                {loading ? "Enviando..." : "Enviar WhatsApp"}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <div className="py-4">
+            <p className="text-muted-foreground text-center">
+              Esta cuenta no tiene un cliente asignado. Por favor, edita la cuenta y asigna un cliente para poder enviarle notificaciones.
+            </p>
+            <DialogFooter className="mt-4">
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cerrar
+                </Button>
+            </DialogFooter>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )
