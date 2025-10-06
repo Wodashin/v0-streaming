@@ -29,12 +29,24 @@ export async function POST() {
       let allUsersNotified = true;
       totalProcessed++;
       
-      // Itera sobre cada usuario de la cuenta
       for (const user of notification.users) {
         try {
-          // Personaliza el mensaje para cada usuario
-          const message = notification.messageTemplate.replace('{userName}', user.name);
-          const result = await whatsappService.sendMessage(user.phone, message);
+          // --- ESTA ES LA PARTE QUE CAMBIA ---
+          // 1. Determina el nombre de la plantilla a usar
+          const templateName = notification.daysLeft === 1 
+            ? 'vencimiento_singular' // Debes crear esta plantilla para el caso de 1 día
+            : 'notificacion_vencimiento_dias'; // La que ya creaste
+
+          // 2. Prepara los parámetros en el orden correcto {{1}}, {{2}}, {{3}}
+          const params = [
+            user.name,                      // Parámetro {{1}}
+            notification.serviceName,       // Parámetro {{2}}
+            notification.daysLeft.toString() // Parámetro {{3}}
+          ];
+          
+          // 3. Llama a la nueva función para enviar plantillas
+          const result = await whatsappService.sendTemplateMessage(user.phone, templateName, params);
+          // --- FIN DEL CAMBIO ---
 
           if (!result.success) {
             allUsersNotified = false;
@@ -59,7 +71,6 @@ export async function POST() {
         }
       }
 
-      // Marcar la notificación como enviada solo si todos los usuarios fueron notificados con éxito
       if (allUsersNotified) {
         await markNotificationAsSent(notification.accountId, notification.notificationType, "sent");
       } else {
