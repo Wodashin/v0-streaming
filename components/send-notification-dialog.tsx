@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import type { Account, AccountUser } from "@/lib/types"
 import {
   Dialog,
@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getDaysUntilExpiration } from "@/lib/utils/date-utils"
 import { useRouter } from "next/navigation"
-import { Checkbox } from "@/components/ui/checkbox" // Necesitarás importar Checkbox si no está globalmente
+import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle } from "lucide-react"
 
@@ -45,7 +45,6 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
   const handleOpen = (isOpen: boolean) => {
     setOpen(isOpen)
     if (isOpen) {
-      // Al abrir, pre-seleccionar a todos los usuarios
       setSelectedUsers(accountUsersWithPhone);
       setResults([]);
       const daysLeft = getDaysUntilExpiration(account.expiration_date);
@@ -53,8 +52,7 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
       const baseMessage = daysLeft <= 0
         ? `Tu cuenta de ${serviceName} ha vencido. Contáctanos para renovar.`
         : `Tu cuenta de ${serviceName} vence en ${daysLeft} día${daysLeft !== 1 ? "s" : ""}. Recuerda renovarla.`;
-      
-      // Mensaje genérico, la personalización por nombre se puede hacer al enviar
+
       setMessage(`Hola, ${baseMessage}`);
     }
   }
@@ -66,10 +64,9 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
     }
     setLoading(true)
     setResults([])
-    
+
     const sendPromises = selectedUsers.map(async (user) => {
       try {
-        // Personaliza el mensaje para cada usuario
         const personalizedMessage = message.replace('Hola,', `Hola ${user.user_name},`);
         const response = await fetch("/api/whatsapp/test", {
           method: "POST",
@@ -98,10 +95,12 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
     const settledResults = await Promise.all(sendPromises);
     setResults(settledResults);
     setLoading(false);
-    router.refresh();
+    if (settledResults.some(r => r.success)) {
+      router.refresh();
+    }
   };
 
-  const handleSelectAll = (checked: boolean) => {
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
     setSelectedUsers(checked ? accountUsersWithPhone : []);
   };
 
@@ -123,66 +122,69 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
             Enviar mensaje de WhatsApp a los usuarios de la cuenta "{account.streaming_services?.name}"
           </DialogDescription>
         </DialogHeader>
-        
-        {accountUsersWithPhone.length > 0 ? (
-          <div className="grid gap-4 py-4">
-            <div>
-              <Label className="font-semibold">Seleccionar destinatarios</Label>
-              <div className="mt-2 space-y-2 max-h-40 overflow-y-auto rounded-md border p-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="select-all"
-                    checked={selectedUsers.length === accountUsersWithPhone.length}
-                    onCheckedChange={handleSelectAll}
-                  />
-                  <Label htmlFor="select-all" className="font-bold">Seleccionar todos</Label>
-                </div>
-                {accountUsersWithPhone.map(user => (
-                  <div key={user.id} className="flex items-center space-x-2 ml-2">
+
+        <div className="grid gap-4 py-4">
+          {accountUsersWithPhone.length > 0 ? (
+            <>
+              <div>
+                <Label className="font-semibold">Seleccionar destinatarios</Label>
+                <div className="mt-2 space-y-2 max-h-40 overflow-y-auto rounded-md border p-2">
+                  <div className="flex items-center space-x-2">
                     <Checkbox
-                      id={user.id}
-                      checked={selectedUsers.some(su => su.id === user.id)}
-                      onCheckedChange={(checked) => handleUserSelection(user, !!checked)}
+                      id="select-all"
+                      checked={selectedUsers.length === accountUsersWithPhone.length && accountUsersWithPhone.length > 0}
+                      onCheckedChange={handleSelectAll}
                     />
-                    <Label htmlFor={user.id} className="font-normal">
-                      {user.user_name} ({user.user_phone})
-                    </Label>
+                    <Label htmlFor="select-all" className="font-bold">Seleccionar todos</Label>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="message">Mensaje</Label>
-              <Textarea
-                id="message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={5}
-                className="resize-none"
-              />
-               <p className="text-xs text-muted-foreground">El saludo "Hola," se reemplazará por "Hola [Nombre de usuario]," para cada destinatario.</p>
-            </div>
-
-            {results.length > 0 && (
-                <div className="space-y-2">
-                    <Label>Resultados del Envío</Label>
-                    {results.map(result => (
-                        <Alert key={result.phone} variant={result.success ? 'default' : 'destructive'} className="flex items-center gap-2">
-                            {result.success ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-                            <AlertDescription>
-                                <strong>{result.phone}:</strong> {result.message}
-                            </AlertDescription>
-                        </Alert>
-                    ))}
+                  {accountUsersWithPhone.map(user => (
+                    <div key={user.id} className="flex items-center space-x-2 ml-2">
+                      <Checkbox
+                        id={user.id}
+                        checked={selectedUsers.some(su => su.id === user.id)}
+                        onCheckedChange={(checked) => handleUserSelection(user, !!checked)}
+                      />
+                      <Label htmlFor={user.id} className="font-normal">
+                        {user.user_name} ({user.user_phone})
+                      </Label>
+                    </div>
+                  ))}
                 </div>
-            )}
-          </div>
-        ) : (
-          <div className="py-8 text-center text-muted-foreground">
-            <p>Esta cuenta no tiene usuarios con números de teléfono registrados para enviar notificaciones.</p>
-          </div>
-        )}
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="message">Mensaje</Label>
+                <Textarea
+                  id="message"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={5}
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground">El saludo "Hola," se reemplazará por "Hola [Nombre de usuario]," para cada destinatario.</p>
+              </div>
+            </>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              <p>Esta cuenta no tiene usuarios con números de teléfono registrados para enviar notificaciones.</p>
+            </div>
+          )}
+
+          {/* CONTENEDOR DE RESULTADOS CORREGIDO */}
+          {results.length > 0 && (
+            <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border p-2">
+                <Label>Resultados del Envío</Label>
+                {results.map((result, index) => (
+                    <Alert key={`${result.phone}-${index}`} variant={result.success ? 'default' : 'destructive'} className="flex items-center gap-2 text-xs">
+                        {result.success ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                        <AlertDescription>
+                            <strong>{result.phone}:</strong> {result.message}
+                        </AlertDescription>
+                    </Alert>
+                ))}
+            </div>
+          )}
+        </div>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
