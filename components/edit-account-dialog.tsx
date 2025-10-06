@@ -50,7 +50,11 @@ export function EditAccountDialog({ account, customers, services, children }: Ed
         start_date: formData.get("start_date") as string,
         duration_days: Number.parseInt(formData.get("duration_days") as string),
         status: formData.get("status") as string,
-        credentials: (formData.get("credentials") as string) || null,
+        // --- CORRECCIÓN AQUÍ ---
+        // Ahora actualiza los campos de credenciales correctos
+        account_email: (formData.get("account_email") as string) || null,
+        account_password: (formData.get("account_password") as string) || null,
+        account_pin: (formData.get("account_pin") as string) || null,
         notes: (formData.get("notes") as string) || null,
       })
       .eq("id", account.id)
@@ -62,6 +66,7 @@ export function EditAccountDialog({ account, customers, services, children }: Ed
       router.refresh()
     } else {
       console.error("Error updating account:", error)
+      alert("Hubo un error al actualizar la cuenta.")
     }
   }
 
@@ -94,39 +99,28 @@ export function EditAccountDialog({ account, customers, services, children }: Ed
             <div className="grid gap-2">
               <Label htmlFor="service_id">Servicio</Label>
               <Select name="service_id" defaultValue={account.service_id} required>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {services.map((service) => (
-                    <SelectItem key={service.id} value={service.id}>
-                      {service.name}
-                    </SelectItem>
+                    <SelectItem key={service.id} value={service.id}>{service.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="start_date">Fecha de Inicio</Label>
-              <Input id="start_date" name="start_date" type="date" defaultValue={account.start_date} required />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="duration_days">Duración (días)</Label>
-              <Input
-                id="duration_days"
-                name="duration_days"
-                type="number"
-                min="1"
-                defaultValue={account.duration_days}
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="start_date">Fecha de Inicio</Label>
+                <Input id="start_date" name="start_date" type="date" defaultValue={account.start_date} required />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="duration_days">Duración (días)</Label>
+                <Input id="duration_days" name="duration_days" type="number" min="1" defaultValue={account.duration_days} required />
+              </div>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="status">Estado</Label>
               <Select name="status" defaultValue={account.status} required>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">Activa</SelectItem>
                   <SelectItem value="expired">Vencida</SelectItem>
@@ -134,30 +128,31 @@ export function EditAccountDialog({ account, customers, services, children }: Ed
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* --- CORRECCIÓN AQUÍ --- */}
+            {/* Se usan los nuevos campos de credenciales */}
             <div className="grid gap-2">
-              <Label htmlFor="credentials">Credenciales</Label>
-              <Input
-                id="credentials"
-                name="credentials"
-                defaultValue={account.credentials || ""}
-                placeholder="usuario@ejemplo.com / contraseña"
-              />
+              <Label htmlFor="account_email">Email de la Cuenta</Label>
+              <Input id="account_email" name="account_email" defaultValue={account.account_email || ""} placeholder="usuario@ejemplo.com" />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="account_password">Contraseña</Label>
+                    <Input id="account_password" name="account_password" defaultValue={account.account_password || ""} placeholder="••••••••" />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="account_pin">PIN</Label>
+                    <Input id="account_pin" name="account_pin" defaultValue={account.account_pin || ""} placeholder="1234" />
+                </div>
+            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="notes">Notas</Label>
-              <Textarea
-                id="notes"
-                name="notes"
-                defaultValue={account.notes || ""}
-                placeholder="Notas adicionales..."
-                rows={3}
-              />
+              <Textarea id="notes" name="notes" defaultValue={account.notes || ""} placeholder="Notas adicionales..." rows={2} />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancelar
-            </Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button type="submit" disabled={loading}>
               {loading ? "Guardando..." : "Guardar Cambios"}
             </Button>
