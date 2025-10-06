@@ -44,8 +44,9 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
       start_date: formData.get("start_date") as string,
       duration_days: Number.parseInt(formData.get("duration_days") as string),
       user_capacity: Number.parseInt(formData.get("user_capacity") as string),
-      // CAMBIO: Ahora el campo 'credentials' guarda el email de la cuenta.
-      credentials: (formData.get("account_email") as string) || null,
+      // --- CORRECCIÓN AQUÍ ---
+      // Ahora se guarda en la columna correcta 'account_email'
+      account_email: (formData.get("account_email") as string) || null,
       notes: (formData.get("notes") as string) || null,
     })
 
@@ -94,7 +95,6 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
               </Select>
             </div>
             
-            {/* CAMBIO: Se cambió "Credenciales" por "Email de la Cuenta" */}
             <div className="grid gap-2">
               <Label htmlFor="account_email">Email de la Cuenta</Label>
               <Input id="account_email" name="account_email" type="email" placeholder="ejemplo@servicio.com" required />
@@ -132,7 +132,7 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
             
             <div className="grid gap-2">
               <Label htmlFor="notes">Notas (Opcional)</Label>
-              <Textarea id="notes" name="notes" placeholder="Contraseña, detalles de facturación, etc." rows={2} />
+              <Textarea id="notes" name="notes" placeholder="Contraseña, PIN, detalles de facturación, etc." rows={2} />
             </div>
           </div>
           <DialogFooter>
