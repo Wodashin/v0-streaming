@@ -33,10 +33,15 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
   const [serviceFilter, setServiceFilter] = useState<string>("all")
 
   const filteredAccounts = accounts.filter((account) => {
+    const customerName = account.customers?.name?.toLowerCase() || '';
+    const serviceName = account.streaming_services?.name?.toLowerCase() || '';
+    const customerPhone = account.customers?.phone || '';
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+
     const matchesSearch =
-      account.customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      account.streaming_services?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      account.customers?.phone.includes(searchTerm)
+      customerName.includes(lowerCaseSearchTerm) ||
+      serviceName.includes(lowerCaseSearchTerm) ||
+      customerPhone.includes(searchTerm);
 
     const matchesStatus = statusFilter === "all" || account.status === statusFilter
     const matchesService = serviceFilter === "all" || account.service_id === serviceFilter
@@ -53,8 +58,10 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
         action={{
           label: "Agregar Primera Cuenta",
           onClick: () => {
-            // This will be handled by the parent component's AddAccountDialog
-            document.querySelector("[data-add-account-trigger]")?.dispatchEvent(new Event("click"))
+            const trigger = document.querySelector("[data-add-account-trigger]") as HTMLElement | null;
+            if (trigger) {
+              trigger.click();
+            }
           },
         }}
       />
@@ -130,9 +137,11 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
                   const userCount = account.account_users?.length || 0
                   return (
                     <TableRow key={account.id}>
-                      <TableCell className="font-medium">{account.customers?.name}</TableCell>
+                      <TableCell className="font-medium">
+                        {account.customers?.name || <span className="text-xs text-muted-foreground italic">Sin cliente</span>}
+                      </TableCell>
                       <TableCell>{account.streaming_services?.name}</TableCell>
-                      <TableCell>{account.customers?.phone}</TableCell>
+                      <TableCell>{account.customers?.phone || <span className="text-xs text-muted-foreground italic">N/A</span>}</TableCell>
                       <TableCell>
                         <AccountUsersDialog account={account}>
                           <Button variant="ghost" size="sm" className="h-8">
