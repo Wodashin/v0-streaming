@@ -13,13 +13,14 @@ import { DeleteAccountDialog } from "@/components/delete-account-dialog"
 import { SendNotificationDialog } from "@/components/send-notification-dialog"
 import { EmptyState } from "@/components/empty-state"
 import { AccountUsersDialog } from "@/components/account-users-dialog"
+import { RenewAccountDialog } from "@/components/renew-account-dialog" // <-- 1. IMPORTAR EL NUEVO COMPONENTE
 import {
   getDaysUntilExpiration,
   getStatusBadgeColor,
   getExpirationBadgeColor,
   formatDate,
 } from "@/lib/utils/date-utils"
-import { Search, Pencil, Trash2, Send, FileText } from "lucide-react"
+import { Search, Pencil, Trash2, Send, FileText, RefreshCw } from "lucide-react" // <-- 2. IMPORTAR EL ÍCONO RefreshCw
 
 interface AccountsTableProps {
   accounts: Account[]
@@ -44,7 +45,7 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
       customerName.includes(lowerCaseSearchTerm) ||
       serviceName.includes(lowerCaseSearchTerm) ||
       customerPhone.includes(searchTerm) ||
-      credentials.includes(lowerCaseSearchTerm); // Añadido para buscar por credenciales
+      credentials.includes(lowerCaseSearchTerm);
 
     const matchesStatus = statusFilter === "all" || account.status === statusFilter
     const matchesService = serviceFilter === "all" || account.service_id === serviceFilter
@@ -57,14 +58,12 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
       <EmptyState
         icon={FileText}
         title="No hay cuentas registradas"
-        description="Comienza agregando tu primera cuenta de streaming. Podrás gestionar clientes, servicios y recibir notificaciones automáticas de vencimiento."
+        description="Comienza agregando tu primera cuenta de streaming."
         action={{
           label: "Agregar Primera Cuenta",
           onClick: () => {
             const trigger = document.querySelector("[data-add-account-trigger]") as HTMLElement | null;
-            if (trigger) {
-              trigger.click();
-            }
+            if (trigger) trigger.click();
           },
         }}
       />
@@ -86,9 +85,7 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
+            <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Estado" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los estados</SelectItem>
               <SelectItem value="active">Activas</SelectItem>
@@ -97,16 +94,10 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
             </SelectContent>
           </Select>
           <Select value={serviceFilter} onValueChange={setServiceFilter}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Servicio" />
-            </SelectTrigger>
+            <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Servicio" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los servicios</SelectItem>
-              {services.map((service) => (
-                <SelectItem key={service.id} value={service.id}>
-                  {service.name}
-                </SelectItem>
-              ))}
+              {services.map((service) => (<SelectItem key={service.id} value={service.id}>{service.name}</SelectItem>))}
             </SelectContent>
           </Select>
         </div>
@@ -118,9 +109,7 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
               <TableRow>
                 <TableHead>Cliente / Cuenta</TableHead>
                 <TableHead>Servicio</TableHead>
-                <TableHead>Teléfono</TableHead>
                 <TableHead>Usuarios</TableHead>
-                <TableHead>Inicio</TableHead>
                 <TableHead>Vencimiento</TableHead>
                 <TableHead>Días Restantes</TableHead>
                 <TableHead>Estado</TableHead>
@@ -129,11 +118,7 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
             </TableHeader>
             <TableBody>
               {filteredAccounts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground">
-                    No se encontraron cuentas
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No se encontraron cuentas</TableCell></TableRow>
               ) : (
                 filteredAccounts.map((account) => {
                   const daysLeft = getDaysUntilExpiration(account.expiration_date)
@@ -141,21 +126,16 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
                   return (
                     <TableRow key={account.id}>
                       <TableCell className="font-medium">
-                        {/* LÓGICA MEJORADA DE VISUALIZACIÓN */}
                         {account.customers?.name || 
                          (account.credentials ? <span className="text-foreground">{account.credentials.split('/')[0].trim()}</span> : 
                          <span className="text-xs text-muted-foreground italic">Sin cliente</span>)}
                       </TableCell>
                       <TableCell>{account.streaming_services?.name}</TableCell>
-                      <TableCell>{account.customers?.phone || <span className="text-xs text-muted-foreground italic">N/A</span>}</TableCell>
                       <TableCell>
                         <AccountUsersDialog account={account}>
-                          <Button variant="ghost" size="sm" className="h-8">
-                            {userCount}/{account.user_capacity}
-                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8">{userCount}/{account.user_capacity}</Button>
                         </AccountUsersDialog>
                       </TableCell>
-                      <TableCell>{formatDate(account.start_date)}</TableCell>
                       <TableCell>{formatDate(account.expiration_date)}</TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={getExpirationBadgeColor(daysLeft)}>
@@ -164,27 +144,29 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={getStatusBadgeColor(account.status)}>
-                          {account.status === "active"
-                            ? "Activa"
-                            : account.status === "expired"
-                              ? "Vencida"
-                              : "Cancelada"}
+                          {account.status === "active" ? "Activa" : account.status === "expired" ? "Vencida" : "Cancelada"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1">
+                          {/* -- 3. AGREGAR EL BOTÓN DE RENOVACIÓN AQUÍ -- */}
+                          <RenewAccountDialog account={account}>
+                            <Button variant="ghost" size="icon" title="Renovar cuenta">
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          </RenewAccountDialog>
                           <SendNotificationDialog account={account}>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" title="Enviar notificación manual">
                               <Send className="h-4 w-4" />
                             </Button>
                           </SendNotificationDialog>
                           <EditAccountDialog account={account} customers={customers} services={services}>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" title="Editar cuenta">
                               <Pencil className="h-4 w-4" />
                             </Button>
                           </EditAccountDialog>
                           <DeleteAccountDialog accountId={account.id}>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" title="Eliminar cuenta">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </DeleteAccountDialog>
