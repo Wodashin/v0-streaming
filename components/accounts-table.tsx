@@ -143,7 +143,7 @@ export function AccountsTable({ accounts, customers, services }: AccountsTablePr
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          <RegisterPaymentDialog account={account}>
+                          <RegisterPaymentDialog account={account} customers={customers}>
                             <Button variant="ghost" size="icon" title="Registrar Pago"><DollarSign className="h-4 w-4" /></Button>
                           </RegisterPaymentDialog>
                           <RenewAccountDialog account={account}>
