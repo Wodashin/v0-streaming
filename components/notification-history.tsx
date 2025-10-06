@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { History, CheckCircle, XCircle } from "lucide-react"
+import { createClient } from "@/lib/supabase/client" // Importa el cliente de Supabase
 
 interface NotificationHistoryItem {
   id: string
@@ -15,11 +16,11 @@ interface NotificationHistoryItem {
     customers: {
       name: string
       phone: string
-    }
+    } | null // El cliente ahora puede ser null
     streaming_services: {
       name: string
     }
-  }
+  } | null // La cuenta también podría ser null si se borró
 }
 
 export function NotificationHistory() {
@@ -27,46 +28,49 @@ export function NotificationHistory() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const fetchHistory = async () => {
+      const supabase = createClient()
+      // La llamada a la API no es necesaria, podemos hacerlo directo
+      const { data, error } = await supabase
+        .from("notifications")
+        .select(`
+          id,
+          notification_type,
+          sent_at,
+          status,
+          error_message,
+          accounts (
+            streaming_services (name),
+            customers (name, phone)
+          )
+        `)
+        .order("sent_at", { ascending: false })
+        .limit(20)
+
+      if (error) {
+        console.error("[v0] Error fetching history:", error)
+      } else {
+        setHistory(data as NotificationHistoryItem[])
+      }
+      setLoading(false)
+    }
+
     fetchHistory()
   }, [])
 
-  const fetchHistory = async () => {
-    try {
-      const response = await fetch("/api/notifications/history")
-      const data = await response.json()
-
-      if (data.success) {
-        setHistory(data.history)
-      }
-    } catch (error) {
-      console.error("[v0] Error fetching history:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const getNotificationTypeLabel = (type: string) => {
     switch (type) {
-      case "5_days":
-        return "5 días antes"
-      case "3_days":
-        return "3 días antes"
-      case "1_day":
-        return "1 día antes"
-      case "expired":
-        return "Cuenta vencida"
-      default:
-        return type
+      case "5_days": return "5 días antes"
+      case "3_days": return "3 días antes"
+      case "1_day": return "1 día antes"
+      case "expired": return "Cuenta vencida"
+      default: return type
     }
   }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("es-ES", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
     })
   }
 
@@ -85,7 +89,7 @@ export function NotificationHistory() {
           <History className="h-5 w-5" />
           Historial de Notificaciones
         </CardTitle>
-        <CardDescription>Registro de todas las notificaciones enviadas</CardDescription>
+        <CardDescription>Registro de las últimas notificaciones enviadas</CardDescription>
       </CardHeader>
       <CardContent>
         {history.length === 0 ? (
@@ -104,9 +108,12 @@ export function NotificationHistory() {
                     <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
                   )}
                   <div className="space-y-1">
-                    <p className="font-medium text-sm">{item.accounts.customers.name}</p>
+                    <p className="font-medium text-sm">
+                      {/* CORRECCIÓN AQUÍ: Usamos optional chaining y un fallback */}
+                      {item.accounts?.customers?.name || <span className="italic text-muted-foreground">Usuario de cuenta</span>}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      {item.accounts.streaming_services.name} • {item.accounts.customers.phone}
+                      {item.accounts?.streaming_services?.name || 'Servicio eliminado'} • {item.accounts?.customers?.phone || 'Sin teléfono'}
                     </p>
                     <p className="text-xs text-muted-foreground">{formatDate(item.sent_at)}</p>
                     {item.error_message && <p className="text-xs text-red-600">Error: {item.error_message}</p>}
