@@ -1,16 +1,15 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { Users, Plus, Trash2, UserCheck, Mail, Phone, User } from "lucide-react"
-import type { Account, AccountUser } from "@/lib/types"
+import { Users, Plus, Trash2, UserCheck, Mail, Phone, User, Search } from "lucide-react"
+import type { Account, AccountUser, Customer } from "@/lib/types"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
@@ -22,27 +21,49 @@ interface AccountUsersDialogProps {
 export function AccountUsersDialog({ account, children }: AccountUsersDialogProps) {
   const [open, setOpen] = useState(false)
   const [users, setUsers] = useState<AccountUser[]>(account.account_users || [])
-  const [newUser, setNewUser] = useState({
-    user_name: "",
-    user_email: "",
-    user_phone: "",
-    profile_name: "",
-  })
+  const [newUser, setNewUser] = useState({ user_name: "", user_email: "", user_phone: "", profile_name: "" })
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
-  const loadUsers = async () => {
-    const { data, error } = await supabase
-      .from("account_users")
-      .select("*")
-      .eq("account_id", account.id)
-      .order("is_primary", { ascending: false })
-      .order("created_at", { ascending: true })
+  // --- LÓGICA PARA BUSCAR CLIENTES ---
+  const [customerSearchTerm, setCustomerSearchTerm] = useState("")
+  const [customerResults, setCustomerResults] = useState<Customer[]>([])
 
-    if (!error && data) {
-      setUsers(data)
+  useEffect(() => {
+    const searchCustomers = async () => {
+      if (customerSearchTerm.trim().length < 2) {
+        setCustomerResults([])
+        return
+      }
+      const { data, error } = await supabase
+        .from("customers")
+        .select("*")
+        .or(`name.ilike.%${customerSearchTerm}%,phone.ilike.%${customerSearchTerm}%`)
+        .limit(5)
+      
+      if (error) console.error("Error searching customers:", error)
+      else setCustomerResults(data || [])
     }
+    const debounce = setTimeout(() => searchCustomers(), 300)
+    return () => clearTimeout(debounce)
+  }, [customerSearchTerm, supabase])
+
+  const selectCustomer = (customer: Customer) => {
+    setNewUser({
+      user_name: customer.name,
+      user_phone: customer.phone,
+      user_email: customer.email || "",
+      profile_name: "",
+    })
+    setCustomerSearchTerm("")
+    setCustomerResults([])
+  }
+  // --- FIN DE LA LÓGICA ---
+
+  const loadUsers = async () => {
+    const { data } = await supabase.from("account_users").select("*").eq("account_id", account.id).order("created_at")
+    setUsers(data || [])
   }
 
   const handleAddUser = async () => {
@@ -63,191 +84,111 @@ export function AccountUsersDialog({ account, children }: AccountUsersDialogProp
       is_primary: users.length === 0,
     })
 
-    if (error) {
-      console.error("Error adding user:", error)
-      alert("Error al agregar usuario")
-    } else {
+    if (!error) {
       setNewUser({ user_name: "", user_email: "", user_phone: "", profile_name: "" })
       await loadUsers()
       router.refresh()
+    } else {
+        alert("Error al agregar usuario.")
+        console.error("Error adding user:", error)
     }
     setIsLoading(false)
   }
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm("¿Estás seguro de eliminar este usuario?")) return
-
+    if (!confirm("¿Estás seguro de eliminar este usuario?")) return;
     setIsLoading(true)
-    const { error } = await supabase.from("account_users").delete().eq("id", userId)
-
-    if (error) {
-      console.error("Error deleting user:", error)
-      alert("Error al eliminar usuario")
-    } else {
-      await loadUsers()
-      router.refresh()
-    }
+    await supabase.from("account_users").delete().eq("id", userId)
+    await loadUsers()
+    router.refresh()
     setIsLoading(false)
   }
 
   const handleSetPrimary = async (userId: string) => {
     setIsLoading(true)
-
-    // Remove primary from all users
-    await supabase.from("account_users").update({ is_primary: false }).eq("account_id", account.id)
-
-    // Set new primary
-    const { error } = await supabase.from("account_users").update({ is_primary: true }).eq("id", userId)
-
+    // Usar RPC para operación atómica
+    const { error } = await supabase.rpc('set_primary_user', { p_account_id: account.id, p_user_id: userId })
     if (error) {
-      console.error("Error setting primary:", error)
-      alert("Error al establecer usuario principal")
-    } else {
-      await loadUsers()
-      router.refresh()
+        alert("Error al establecer como primario.")
+        console.error("Error setting primary:", error)
     }
+    await loadUsers()
+    router.refresh()
     setIsLoading(false)
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children || (
-          <Button variant="outline" size="sm" onClick={() => loadUsers()}>
-            <Users className="h-4 w-4 mr-2" />
-            Usuarios ({users.length}/{account.user_capacity})
-          </Button>
-        )}
-      </DialogTrigger>
+      <DialogTrigger asChild>{children || <Button variant="outline" size="sm" onClick={() => loadUsers()}> <Users className="h-4 w-4 mr-2" /> Usuarios ({users.length}/{account.user_capacity})</Button>}</DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Usuarios de la Cuenta - {account.streaming_services?.name}</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Capacidad: {users.length} de {account.user_capacity} usuarios
-          </p>
+          <p className="text-sm text-muted-foreground">Capacidad: {users.length} de {account.user_capacity} usuarios</p>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Existing Users */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium">Usuarios Actuales</h3>
-            {users.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No hay usuarios agregados</p>
-                </CardContent>
-              </Card>
-            ) : (
+            {users.length > 0 ? (
               <div className="space-y-2">
                 {users.map((user) => (
-                  <Card key={user.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{user.user_name}</span>
-                            {user.is_primary && (
-                              <Badge variant="default" className="text-xs">
-                                Principal
-                              </Badge>
-                            )}
-                          </div>
-                          {user.profile_name && (
-                            <p className="text-sm text-muted-foreground">Perfil: {user.profile_name}</p>
-                          )}
-                          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                            {user.user_email && (
-                              <div className="flex items-center gap-1">
-                                <Mail className="h-3 w-3" />
-                                {user.user_email}
-                              </div>
-                            )}
-                            {user.user_phone && (
-                              <div className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                {user.user_phone}
-                              </div>
-                            )}
-                          </div>
+                  <Card key={user.id}><CardContent className="p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{user.user_name}</p>
+                          {user.is_primary && <Badge variant="default" className="text-xs">Principal</Badge>}
                         </div>
-                        <div className="flex gap-1">
-                          {!user.is_primary && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleSetPrimary(user.id)}
-                              disabled={isLoading}
-                              title="Establecer como principal"
-                            >
-                              <UserCheck className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteUser(user.id)}
-                            disabled={isLoading}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          {user.profile_name && <div className="flex items-center gap-1"><User className="h-3 w-3" /> Perfil: {user.profile_name}</div>}
+                          {user.user_email && <div className="flex items-center gap-1"><Mail className="h-3 w-3" /> {user.user_email}</div>}
+                          {user.user_phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3" /> {user.user_phone}</div>}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                      <div className="flex items-center">
+                        {!user.is_primary && <Button variant="ghost" size="icon" onClick={() => handleSetPrimary(user.id)} disabled={isLoading} title="Establecer como principal"><UserCheck className="h-4 w-4" /></Button>}
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)} disabled={isLoading} title="Eliminar usuario"><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </div>
+                  </CardContent></Card>
                 ))}
               </div>
-            )}
+            ) : <p className="text-sm text-muted-foreground text-center py-4">No hay usuarios agregados en esta cuenta.</p>}
           </div>
 
-          {/* Add New User */}
+          {/* Add New User Section */}
           {users.length < account.user_capacity && (
-            <div className="space-y-3">
+            <div className="space-y-4 pt-4 border-t">
               <h3 className="text-sm font-medium">Agregar Nuevo Usuario</h3>
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="user_name">Nombre del Usuario *</Label>
-                  <Input
-                    id="user_name"
-                    value={newUser.user_name}
-                    onChange={(e) => setNewUser({ ...newUser, user_name: e.target.value })}
-                    placeholder="Juan Pérez"
-                  />
+              
+              <div className="space-y-2 relative">
+                <Label htmlFor="customer-search">Buscar y asignar cliente existente</Label>
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input id="customer-search" placeholder="Buscar por nombre o teléfono..." value={customerSearchTerm} onChange={(e) => setCustomerSearchTerm(e.target.value)} className="pl-9" />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="profile_name">Nombre del Perfil</Label>
-                  <Input
-                    id="profile_name"
-                    value={newUser.profile_name}
-                    onChange={(e) => setNewUser({ ...newUser, profile_name: e.target.value })}
-                    placeholder="Juan (opcional)"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="user_email">Email</Label>
-                  <Input
-                    id="user_email"
-                    type="email"
-                    value={newUser.user_email}
-                    onChange={(e) => setNewUser({ ...newUser, user_email: e.target.value })}
-                    placeholder="juan@ejemplo.com (opcional)"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="user_phone">Teléfono</Label>
-                  <Input
-                    id="user_phone"
-                    value={newUser.user_phone}
-                    onChange={(e) => setNewUser({ ...newUser, user_phone: e.target.value })}
-                    placeholder="+1234567890 (opcional)"
-                  />
-                </div>
-                <Button onClick={handleAddUser} disabled={isLoading || !newUser.user_name.trim()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar Usuario
-                </Button>
+                {customerResults.length > 0 && (
+                    <div className="absolute z-10 w-full bg-card border rounded-md shadow-lg mt-1 max-h-48 overflow-y-auto">
+                        {customerResults.map(customer => (
+                            <div key={customer.id} onClick={() => selectCustomer(customer)} className="p-2 hover:bg-muted cursor-pointer text-sm">
+                                <p className="font-medium">{customer.name}</p>
+                                <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
               </div>
+
+              <div className="relative text-center my-4"><div className="absolute inset-0 flex items-center"><span className="w-full border-t"></span></div><span className="relative bg-card px-2 text-xs uppercase text-muted-foreground">O</span></div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-2"><Label htmlFor="user_name">Nombre del Usuario *</Label><Input id="user_name" value={newUser.user_name} onChange={(e) => setNewUser({ ...newUser, user_name: e.target.value })} placeholder="Juan Pérez" /></div>
+                <div className="grid gap-2"><Label htmlFor="user_phone">Teléfono del Usuario</Label><Input id="user_phone" value={newUser.user_phone} onChange={(e) => setNewUser({ ...newUser, user_phone: e.target.value })} placeholder="+1234567890" /></div>
+                <div className="grid gap-2"><Label htmlFor="user_email">Email del Usuario</Label><Input id="user_email" type="email" value={newUser.user_email} onChange={(e) => setNewUser({ ...newUser, user_email: e.target.value })} placeholder="juan@ejemplo.com" /></div>
+                <div className="grid gap-2"><Label htmlFor="profile_name">Nombre del Perfil</Label><Input id="profile_name" value={newUser.profile_name} onChange={(e) => setNewUser({ ...newUser, profile_name: e.target.value })} placeholder="Juanito" /></div>
+              </div>
+              <Button onClick={handleAddUser} disabled={isLoading || !newUser.user_name.trim()} className="w-full"><Plus className="h-4 w-4 mr-2" /> Agregar Usuario a la Cuenta</Button>
             </div>
           )}
         </div>
