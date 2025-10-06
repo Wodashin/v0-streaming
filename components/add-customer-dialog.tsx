@@ -54,8 +54,9 @@ export function AddCustomerDialog({ children }: AddCustomerDialogProps) {
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Nuevo Cliente</DialogTitle>
-            <DialogDescription>Agrega un nuevo cliente al sistema</DialogDescription>
+            {/* CAMBIO: Título y descripción actualizados */}
+            <DialogTitle>Nuevo Usuario</DialogTitle>
+            <DialogDescription>Agrega un nuevo usuario a tu lista de contactos. Podrás asignarlo a cuentas más tarde.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -64,7 +65,7 @@ export function AddCustomerDialog({ children }: AddCustomerDialogProps) {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="phone">Teléfono</Label>
-              <Input id="phone" name="phone" type="tel" placeholder="+1234567890" required />
+              <Input id="phone" name="phone" type="tel" placeholder="+56912345678" required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email (opcional)</Label>
@@ -76,7 +77,7 @@ export function AddCustomerDialog({ children }: AddCustomerDialogProps) {
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Guardando..." : "Guardar"}
+              {loading ? "Guardando..." : "Guardar Usuario"}
             </Button>
           </DialogFooter>
         </form>
