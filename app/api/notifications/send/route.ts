@@ -4,77 +4,72 @@ import { createWhatsAppService } from "@/lib/whatsapp/whatsapp-service"
 
 export async function POST() {
   try {
-    const notifications = await getAccountsNeedingNotification()
+    const notificationsToSend = await getAccountsNeedingNotification()
 
-    if (notifications.length === 0) {
+    if (notificationsToSend.length === 0) {
       return NextResponse.json({
         success: true,
         totalProcessed: 0,
         results: [],
-        message: "No notifications to send",
+        message: "No hay notificaciones nuevas para enviar.",
       })
     }
 
-    let whatsappService
+    let whatsappService;
     try {
-      whatsappService = createWhatsAppService()
-    } catch (error) {
-      console.error("[v0] WhatsApp service initialization error:", error)
-      return NextResponse.json(
-        {
-          success: false,
-          error: error instanceof Error ? error.message : "Failed to initialize WhatsApp service",
-        },
-        { status: 500 },
-      )
+        whatsappService = createWhatsAppService();
+    } catch(e) {
+        return NextResponse.json({ success: false, error: (e as Error).message }, { status: 500 });
     }
+    
+    const results = [];
+    let totalProcessed = 0;
 
-    const results = []
+    for (const notification of notificationsToSend) {
+      let allUsersNotified = true;
+      totalProcessed++;
+      
+      // Itera sobre cada usuario de la cuenta
+      for (const user of notification.users) {
+        try {
+          // Personaliza el mensaje para cada usuario
+          const message = notification.messageTemplate.replace('{userName}', user.name);
+          const result = await whatsappService.sendMessage(user.phone, message);
 
-    for (const notification of notifications) {
-      try {
-        const result = await whatsappService.sendMessage(notification.customerPhone, notification.message)
-
-        if (result.success) {
-          console.log("[v0] WhatsApp message sent:", {
-            to: notification.customerPhone,
-            messageId: result.messageId,
-          })
-
-          await markNotificationAsSent(notification.accountId, notification.notificationType, "sent")
-
+          if (!result.success) {
+            allUsersNotified = false;
+            console.error(`[v0] Failed to send to ${user.name} (${user.phone}): ${result.error}`);
+          }
           results.push({
             accountId: notification.accountId,
-            customerName: notification.customerName,
-            status: "sent",
-            messageId: result.messageId,
-          })
-        } else {
-          throw new Error(result.error || "Failed to send message")
+            userName: user.name,
+            phone: user.phone,
+            status: result.success ? "sent" : "failed",
+            error: result.error,
+          });
+        } catch (error) {
+          allUsersNotified = false;
+          results.push({
+            accountId: notification.accountId,
+            userName: user.name,
+            phone: user.phone,
+            status: "failed",
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
         }
-      } catch (error) {
-        console.error("[v0] Error sending notification:", error)
+      }
 
-        const errorMessage = error instanceof Error ? error.message : "Unknown error"
-
-        await markNotificationAsSent(notification.accountId, notification.notificationType, "failed", errorMessage)
-
-        results.push({
-          accountId: notification.accountId,
-          customerName: notification.customerName,
-          status: "failed",
-          error: errorMessage,
-        })
+      // Marcar la notificación como enviada solo si todos los usuarios fueron notificados con éxito
+      if (allUsersNotified) {
+        await markNotificationAsSent(notification.accountId, notification.notificationType, "sent");
+      } else {
+        await markNotificationAsSent(notification.accountId, notification.notificationType, "failed", "One or more users failed to receive the notification.");
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      totalProcessed: results.length,
-      results,
-    })
+    return NextResponse.json({ success: true, totalProcessed, results });
   } catch (error) {
-    console.error("[v0] Error in send notifications:", error)
-    return NextResponse.json({ success: false, error: "Failed to send notifications" }, { status: 500 })
+    console.error("[v0] CRITICAL ERROR in /api/notifications/send:", error);
+    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }
