@@ -3,7 +3,16 @@
 import { useState } from "react";
 import type { Account, AccountHistoryEvent } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter, // <-- 1. IMPORTACIÓN AÑADIDA
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button"; // <-- Importar Button
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Clock } from "lucide-react";
@@ -14,6 +23,7 @@ interface AccountHistoryDialogProps {
 }
 
 export function AccountHistoryDialog({ account, children }: AccountHistoryDialogProps) {
+  const [open, setOpen] = useState(false); // <-- Añadido para controlar el estado
   const [history, setHistory] = useState<AccountHistoryEvent[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -42,7 +52,12 @@ export function AccountHistoryDialog({ account, children }: AccountHistoryDialog
   }
 
   return (
-    <Dialog onOpenChange={(open) => open && fetchHistory()}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (isOpen) {
+        fetchHistory();
+      }
+    }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -53,18 +68,18 @@ export function AccountHistoryDialog({ account, children }: AccountHistoryDialog
         </DialogHeader>
         <ScrollArea className="h-72">
           <div className="space-y-4 p-1">
-            {loading && <p>Cargando historial...</p>}
-            {!loading && history.length === 0 && <p>No hay historial para esta cuenta.</p>}
+            {loading && <p className="text-center text-muted-foreground">Cargando historial...</p>}
+            {!loading && history.length === 0 && <p className="text-center text-muted-foreground">No hay historial para esta cuenta.</p>}
             {history.map(event => (
               <div key={event.id} className="flex items-start gap-4">
-                <div className="flex flex-col items-center">
-                  <span className="relative flex h-3 w-3">
+                <div className="flex flex-col items-center self-stretch">
+                  <span className="relative flex h-3 w-3 mt-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/50 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
                   </span>
-                  <div className="w-px h-full bg-border my-1"></div>
+                  <div className="w-px flex-1 bg-border my-1"></div>
                 </div>
-                <div className="flex-1 -mt-1.5">
+                <div className="flex-1 pb-4">
                   <div className="flex items-center gap-2">
                     <Badge variant={getEventTypeVariant(event.event_type)}>{event.event_type.replace(/_/g, ' ')}</Badge>
                     <p className="text-xs text-muted-foreground">
@@ -77,6 +92,10 @@ export function AccountHistoryDialog({ account, children }: AccountHistoryDialog
             ))}
           </div>
         </ScrollArea>
+        {/* --- 2. BLOQUE AÑADIDO --- */}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cerrar</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
