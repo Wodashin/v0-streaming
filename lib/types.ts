@@ -21,11 +21,11 @@ export interface Account {
   duration_days: number
   expiration_date: string
   status: "active" | "expired" | "cancelled"
-  payment_status: "paid" | "pending"
+  // payment_status: "paid" | "pending" <-- ESTE CAMPO SE ELIMINA
   account_email: string | null
   account_password: string | null
   account_pin: string | null
-  total_cost?: number; // <<-- NUEVO CAMPO: Costo total de la cuenta para el ciclo
+  total_cost?: number;
   notes: string | null
   user_capacity: number
   created_at: string
