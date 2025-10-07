@@ -21,11 +21,10 @@ export interface Account {
   duration_days: number
   expiration_date: string
   status: "active" | "expired" | "cancelled"
-  // payment_status: "paid" | "pending" <-- ESTE CAMPO SE ELIMINA
   account_email: string | null
   account_password: string | null
   account_pin: string | null
-  total_cost?: number;
+  total_cost?: number; // Costo total de la cuenta para el ciclo
   notes: string | null
   user_capacity: number
   created_at: string
@@ -61,7 +60,7 @@ export interface Notification {
 export interface Payment {
     id: string;
     account_id: string;
-    user_id: string | null;
+    user_id: string | null; // ID del 'customer' que pagó
     amount: number;
     payment_date: string;
     payment_method: string | null;
