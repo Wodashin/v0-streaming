@@ -34,16 +34,15 @@ export function RenewAccountDialog({ account, children }: RenewAccountDialogProp
     setLoading(true)
     const supabase = createClient()
     
-    // --- CORRECCIÓN AQUÍ ---
-    // Se elimina la actualización del campo 'payment_status' que ya no existe en la tabla 'accounts'.
-    // El trigger de la base de datos se encargará de reiniciar el estado de los usuarios.
+    // Al actualizar la 'expiration_date', el trigger de la BD se encarga
+    // de reiniciar el 'payment_status' de los usuarios.
     const { error } = await supabase
       .from("accounts")
       .update({
         start_date: account.expiration_date,
         duration_days: account.duration_days,
         status: 'active',
-        total_cost: newCost 
+        total_cost: newCost
       })
       .eq("id", account.id)
 
@@ -80,7 +79,7 @@ export function RenewAccountDialog({ account, children }: RenewAccountDialogProp
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="new_cost">Nuevo Costo Total de la Cuenta</Label>
-                <Input id="new_cost" type="number" step="0.01" value={newCost} onChange={(e) => setNewCost(Number(e.target.value))} />
+                <Input id="new_cost" type="number" step="1" value={newCost} onChange={(e) => setNewCost(Number(e.target.value))} />
             </div>
         </div>
         <DialogFooter>
