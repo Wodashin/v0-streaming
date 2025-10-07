@@ -26,7 +26,6 @@ function SubmitButton() {
 }
 
 export function RegisterForm() {
-  // Usamos useFormState para un mejor manejo de errores desde el servidor
   const [state, formAction] = useFormState(registerUser, null)
 
   return (
@@ -63,10 +62,6 @@ export function RegisterForm() {
         <p className="text-xs text-muted-foreground">Mínimo 6 caracteres</p>
       </div>
       
-      {/* No es necesario confirmar la contraseña aquí, Supabase se encarga.
-          Pero si quieres mantenerlo, asegúrate de que tu `registerUser` lo valide.
-          Por simplicidad, lo he eliminado del flujo principal. */}
-
       <SubmitButton />
     </form>
   )
