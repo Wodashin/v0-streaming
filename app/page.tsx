@@ -18,8 +18,12 @@ export default async function Home() {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect("/auth/login")
 
+  if (!user) {
+    redirect("/auth/login")
+  }
+
+  // Se añade el filtro .is('deleted_at', null) para obtener solo las cuentas activas (no archivadas)
   const { data: accounts } = await supabase
     .from("accounts")
     .select(`
@@ -29,6 +33,7 @@ export default async function Home() {
       account_users ( * ),
       payments ( * )
     `)
+    .is('deleted_at', null) // <-- Solo trae cuentas que no han sido "eliminadas"
     .order("expiration_date", { ascending: true })
 
   const { data: customers } = await supabase.from("customers").select("*").order("name")
