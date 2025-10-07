@@ -11,8 +11,25 @@ export default async function ReportsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect("/auth/login")
 
-  const { data: payments } = await supabase.from("payments").select("amount, payment_date").order("payment_date", { ascending: false });
-  const { data: accounts } = await supabase.from("accounts").select("id, start_date, total_cost").order("start_date", { ascending: false });
+  // --- CORRECCIÓN AQUÍ: Se ajusta la consulta para obtener datos relacionados ---
+  const { data: payments } = await supabase
+    .from("payments")
+    .select(`
+      amount,
+      payment_date,
+      customers ( name ),
+      accounts ( streaming_services ( name ) )
+    `)
+    .order("payment_date", { ascending: false });
+
+  const { data: accounts } = await supabase
+    .from("accounts")
+    .select(`
+      total_cost,
+      start_date,
+      streaming_services ( name )
+    `)
+    .order("start_date", { ascending: false });
 
   return (
     <div className="min-h-screen bg-muted/40">
