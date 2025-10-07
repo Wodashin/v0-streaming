@@ -2,7 +2,6 @@ export interface StreamingService {
   id: string
   name: string
   default_user_capacity: number
-  price_per_user?: number; // Campo para precio por usuario
   created_at: string
 }
 
@@ -26,6 +25,7 @@ export interface Account {
   account_email: string | null
   account_password: string | null
   account_pin: string | null
+  total_cost?: number; // <<-- NUEVO CAMPO: Costo total de la cuenta para el ciclo
   notes: string | null
   user_capacity: number
   created_at: string
@@ -44,7 +44,7 @@ export interface AccountUser {
   user_phone: string | null
   profile_name: string | null
   is_primary: boolean
-  payment_status: "paid" | "pending"; // Campo para estado de pago
+  payment_status: "paid" | "pending";
   created_at: string
   updated_at: string
 }
@@ -61,7 +61,7 @@ export interface Notification {
 export interface Payment {
     id: string;
     account_id: string;
-    user_id: string | null; // ID del 'customer' que pagó
+    user_id: string | null;
     amount: number;
     payment_date: string;
     payment_method: string | null;
