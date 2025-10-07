@@ -33,14 +33,17 @@ export function RenewAccountDialog({ account, children }: RenewAccountDialogProp
   const handleRenew = async () => {
     setLoading(true)
     const supabase = createClient()
+    
+    // --- CORRECCIÓN AQUÍ ---
+    // Se elimina la actualización del campo 'payment_status' que ya no existe en la tabla 'accounts'.
+    // El trigger de la base de datos se encargará de reiniciar el estado de los usuarios.
     const { error } = await supabase
       .from("accounts")
       .update({
         start_date: account.expiration_date,
         duration_days: account.duration_days,
         status: 'active',
-        payment_status: 'pending',
-        total_cost: newCost
+        total_cost: newCost 
       })
       .eq("id", account.id)
 
@@ -52,6 +55,7 @@ export function RenewAccountDialog({ account, children }: RenewAccountDialogProp
       router.refresh()
     } else {
       toast({ title: "Error", description: "No se pudo renovar la cuenta.", variant: "destructive" })
+      console.error("Error renewing account:", error);
     }
   }
 
