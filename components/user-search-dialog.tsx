@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+// --- CORRECCIÓN AQUÍ: Se añade DialogDescription a la lista de importación ---
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -22,7 +23,7 @@ interface UserSearchResult {
     id: string
     status: string
     expiration_date: string
-    account_email: string | null // <-- CAMBIO: Usamos el email de la cuenta
+    account_email: string | null
     service: {
       name: string
     }
@@ -40,7 +41,6 @@ export function UserSearchDialog() {
     if (!searchTerm.trim()) return
 
     setIsLoading(true)
-    // --- CAMBIO: Se actualiza la consulta para no depender de 'customers' ---
     const { data, error } = await supabase
       .from("account_users")
       .select(
@@ -61,7 +61,6 @@ export function UserSearchDialog() {
       .order("created_at", { ascending: false })
 
     if (!error && data) {
-      // Mapeo de datos al nuevo tipo de resultado
       const formattedResults = data.map((item: any) => ({
         id: item.id,
         user_name: item.user_name,
@@ -88,7 +87,14 @@ export function UserSearchDialog() {
   }
 
   const getStatusColor = (status: string) => {
-    // ... (sin cambios)
+    switch (status) {
+      case "active":
+        return "bg-green-500/10 text-green-700 dark:text-green-400"
+      case "expired":
+        return "bg-red-500/10 text-red-700 dark:text-red-400"
+      default:
+        return "bg-gray-500/10 text-gray-700 dark:text-gray-400"
+    }
   }
 
   return (
@@ -118,7 +124,14 @@ export function UserSearchDialog() {
             </Button>
           </div>
 
-          {/* ... (código para estado vacío sin cambios) ... */}
+          {results.length === 0 && searchTerm && !isLoading && (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                <User className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No se encontraron usuarios</p>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="space-y-3">
             {results.map((result) => (
@@ -147,7 +160,6 @@ export function UserSearchDialog() {
                         </Badge>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
-                        {/* --- CAMBIO: Se muestra el email de la cuenta en lugar del cliente --- */}
                         <div className="flex items-center gap-2">
                             <Mail className="h-4 w-4 text-muted-foreground"/>
                             <p className="font-medium">{result.account.account_email || 'Sin email'}</p>
