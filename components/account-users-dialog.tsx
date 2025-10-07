@@ -26,7 +26,6 @@ export function AccountUsersDialog({ account, children }: AccountUsersDialogProp
   const router = useRouter()
   const supabase = createClient()
 
-  // --- LÓGICA PARA BUSCAR CLIENTES ---
   const [customerSearchTerm, setCustomerSearchTerm] = useState("")
   const [customerResults, setCustomerResults] = useState<Customer[]>([])
 
@@ -59,7 +58,6 @@ export function AccountUsersDialog({ account, children }: AccountUsersDialogProp
     setCustomerSearchTerm("")
     setCustomerResults([])
   }
-  // --- FIN DE LA LÓGICA ---
 
   const loadUsers = async () => {
     const { data } = await supabase.from("account_users").select("*").eq("account_id", account.id).order("created_at")
@@ -67,33 +65,62 @@ export function AccountUsersDialog({ account, children }: AccountUsersDialogProp
   }
 
   const handleAddUser = async () => {
-    if (!newUser.user_name.trim()) return
+    if (!newUser.user_name.trim() || users.length >= account.user_capacity) return;
 
-    if (users.length >= account.user_capacity) {
-      alert(`Esta cuenta solo permite ${account.user_capacity} usuarios`)
-      return
+    setIsLoading(true);
+    let customerId = null;
+
+    let existingCustomerQuery = supabase.from('customers').select('id');
+    if (newUser.user_phone) {
+        existingCustomerQuery = existingCustomerQuery.eq('phone', newUser.user_phone);
+    } else if (newUser.user_email) {
+        existingCustomerQuery = existingCustomerQuery.eq('email', newUser.user_email);
+    } else {
+        existingCustomerQuery = existingCustomerQuery.eq('name', newUser.user_name);
+    }
+    const { data: existingCustomer } = await existingCustomerQuery.maybeSingle();
+
+    if (existingCustomer) {
+        customerId = existingCustomer.id;
+    } else {
+        const { data: newCustomer, error: newCustomerError } = await supabase
+            .from('customers')
+            .insert({
+                name: newUser.user_name,
+                phone: newUser.user_phone || '',
+                email: newUser.user_email || null,
+            })
+            .select('id')
+            .single();
+
+        if (newCustomerError) {
+            alert("Error al crear el nuevo usuario en la lista de contactos.");
+            setIsLoading(false);
+            return;
+        }
+        customerId = newCustomer.id;
     }
 
-    setIsLoading(true)
-    const { error } = await supabase.from("account_users").insert({
+    const { error: assignError } = await supabase.from("account_users").insert({
       account_id: account.id,
+      customer_id: customerId,
       user_name: newUser.user_name,
       user_email: newUser.user_email || null,
       user_phone: newUser.user_phone || null,
       profile_name: newUser.profile_name || null,
       is_primary: users.length === 0,
-    })
+    });
 
-    if (!error) {
-      setNewUser({ user_name: "", user_email: "", user_phone: "", profile_name: "" })
-      await loadUsers()
-      router.refresh()
+    if (!assignError) {
+      setNewUser({ user_name: "", user_email: "", user_phone: "", profile_name: "" });
+      await loadUsers();
+      router.refresh();
     } else {
-        alert("Error al agregar usuario.")
-        console.error("Error adding user:", error)
+        alert("Error al asignar el usuario a la cuenta.");
+        console.error("Error assigning user:", assignError);
     }
-    setIsLoading(false)
-  }
+    setIsLoading(false);
+  };
 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm("¿Estás seguro de eliminar este usuario?")) return;
@@ -106,7 +133,6 @@ export function AccountUsersDialog({ account, children }: AccountUsersDialogProp
 
   const handleSetPrimary = async (userId: string) => {
     setIsLoading(true)
-    // Usar RPC para operación atómica
     const { error } = await supabase.rpc('set_primary_user', { p_account_id: account.id, p_user_id: userId })
     if (error) {
         alert("Error al establecer como primario.")
@@ -119,7 +145,7 @@ export function AccountUsersDialog({ account, children }: AccountUsersDialogProp
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children || <Button variant="outline" size="sm" onClick={() => loadUsers()}> <Users className="h-4 w-4 mr-2" /> Usuarios ({users.length}/{account.user_capacity})</Button>}</DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Usuarios de la Cuenta - {account.streaming_services?.name}</DialogTitle>
@@ -127,7 +153,6 @@ export function AccountUsersDialog({ account, children }: AccountUsersDialogProp
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Existing Users */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium">Usuarios Actuales</h3>
             {users.length > 0 ? (
@@ -139,6 +164,7 @@ export function AccountUsersDialog({ account, children }: AccountUsersDialogProp
                         <div className="flex items-center gap-2">
                           <p className="font-medium">{user.user_name}</p>
                           {user.is_primary && <Badge variant="default" className="text-xs">Principal</Badge>}
+                          <Badge variant={user.payment_status === 'paid' ? 'secondary' : 'destructive'} className="text-xs">{user.payment_status === 'paid' ? 'Pagado' : 'Pendiente'}</Badge>
                         </div>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                           {user.profile_name && <div className="flex items-center gap-1"><User className="h-3 w-3" /> Perfil: {user.profile_name}</div>}
@@ -157,13 +183,12 @@ export function AccountUsersDialog({ account, children }: AccountUsersDialogProp
             ) : <p className="text-sm text-muted-foreground text-center py-4">No hay usuarios agregados en esta cuenta.</p>}
           </div>
 
-          {/* Add New User Section */}
           {users.length < account.user_capacity && (
             <div className="space-y-4 pt-4 border-t">
               <h3 className="text-sm font-medium">Agregar Nuevo Usuario</h3>
               
               <div className="space-y-2 relative">
-                <Label htmlFor="customer-search">Buscar y asignar cliente existente</Label>
+                <Label htmlFor="customer-search">Buscar y asignar contacto existente</Label>
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input id="customer-search" placeholder="Buscar por nombre o teléfono..." value={customerSearchTerm} onChange={(e) => setCustomerSearchTerm(e.target.value)} className="pl-9" />
@@ -180,13 +205,13 @@ export function AccountUsersDialog({ account, children }: AccountUsersDialogProp
                 )}
               </div>
 
-              <div className="relative text-center my-4"><div className="absolute inset-0 flex items-center"><span className="w-full border-t"></span></div><span className="relative bg-card px-2 text-xs uppercase text-muted-foreground">O</span></div>
+              <div className="relative text-center my-4"><div className="absolute inset-0 flex items-center"><span className="w-full border-t"></span></div><span className="relative bg-card px-2 text-xs uppercase text-muted-foreground">O crear nuevo</span></div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-2"><Label htmlFor="user_name">Nombre del Usuario *</Label><Input id="user_name" value={newUser.user_name} onChange={(e) => setNewUser({ ...newUser, user_name: e.target.value })} placeholder="Juan Pérez" /></div>
-                <div className="grid gap-2"><Label htmlFor="user_phone">Teléfono del Usuario</Label><Input id="user_phone" value={newUser.user_phone} onChange={(e) => setNewUser({ ...newUser, user_phone: e.target.value })} placeholder="+1234567890" /></div>
-                <div className="grid gap-2"><Label htmlFor="user_email">Email del Usuario</Label><Input id="user_email" type="email" value={newUser.user_email} onChange={(e) => setNewUser({ ...newUser, user_email: e.target.value })} placeholder="juan@ejemplo.com" /></div>
-                <div className="grid gap-2"><Label htmlFor="profile_name">Nombre del Perfil</Label><Input id="profile_name" value={newUser.profile_name} onChange={(e) => setNewUser({ ...newUser, profile_name: e.target.value })} placeholder="Juanito" /></div>
+                <div className="grid gap-2"><Label htmlFor="user_name">Nombre *</Label><Input id="user_name" value={newUser.user_name} onChange={(e) => setNewUser({ ...newUser, user_name: e.target.value })} /></div>
+                <div className="grid gap-2"><Label htmlFor="user_phone">Teléfono</Label><Input id="user_phone" value={newUser.user_phone} onChange={(e) => setNewUser({ ...newUser, user_phone: e.target.value })} /></div>
+                <div className="grid gap-2"><Label htmlFor="user_email">Email</Label><Input id="user_email" type="email" value={newUser.user_email} onChange={(e) => setNewUser({ ...newUser, user_email: e.target.value })} /></div>
+                <div className="grid gap-2"><Label htmlFor="profile_name">Nombre del Perfil</Label><Input id="profile_name" value={newUser.profile_name} onChange={(e) => setNewUser({ ...newUser, profile_name: e.target.value })} /></div>
               </div>
               <Button onClick={handleAddUser} disabled={isLoading || !newUser.user_name.trim()} className="w-full"><Plus className="h-4 w-4 mr-2" /> Agregar Usuario a la Cuenta</Button>
             </div>
