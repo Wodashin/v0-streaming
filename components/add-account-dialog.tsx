@@ -1,74 +1,94 @@
 "use client"
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import type { StreamingService, Account } from "@/lib/types";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import type React from "react"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+import type { StreamingService, Account } from "@/lib/types"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
 
 interface AddAccountDialogProps {
-  services: StreamingService[];
-  children: React.ReactNode;
+  services: StreamingService[]
+  children: React.ReactNode
 }
 
 export function AddAccountDialog({ services, children }: AddAccountDialogProps) {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [selectedService, setSelectedService] = useState<StreamingService | null>(null);
-  const [showReactivateDialog, setShowReactivateDialog] = useState(false);
-  const [existingAccount, setExistingAccount] = useState<Partial<Account> | null>(null);
-  const [formData, setFormData] = useState<FormData | null>(null);
-  const router = useRouter();
-  const { toast } = useToast();
-  const supabase = createClient();
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [selectedService, setSelectedService] = useState<StreamingService | null>(null)
+  const [showReactivateDialog, setShowReactivateDialog] = useState(false)
+  const [existingAccount, setExistingAccount] = useState<Partial<Account> | null>(null)
+  const [formData, setFormData] = useState<FormData | null>(null)
+  const router = useRouter()
+  const { toast } = useToast()
+  const supabase = createClient()
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setLoading(true)
 
-    const currentFormData = new FormData(e.currentTarget);
-    const email = currentFormData.get("account_email") as string;
-    const serviceId = currentFormData.get("service_id") as string;
+    const currentFormData = new FormData(e.currentTarget)
+    const email = currentFormData.get("account_email") as string
+    const serviceId = currentFormData.get("service_id") as string
 
     const { data: account } = await supabase
       .from("accounts")
       .select("id, deleted_at")
       .eq("account_email", email)
       .eq("service_id", serviceId)
-      .maybeSingle();
+      .maybeSingle()
 
     if (account) {
       if (account.deleted_at) {
-        setExistingAccount(account);
-        setFormData(currentFormData);
-        setShowReactivateDialog(true);
+        setExistingAccount(account)
+        setFormData(currentFormData)
+        setShowReactivateDialog(true)
       } else {
-        toast({ title: "Cuenta Duplicada", description: "Ya existe una cuenta activa para este servicio con el mismo email.", variant: "destructive" });
+        toast({ title: "Cuenta Duplicada", description: "Ya existe una cuenta activa para este servicio con el mismo email.", variant: "destructive" })
       }
     } else {
-      await createNewAccount(currentFormData);
+      await createNewAccount(currentFormData)
     }
 
-    setLoading(false);
-  };
+    setLoading(false)
+  }
 
   const createNewAccount = async (data: FormData) => {
-    // ... (Esta función no cambia)
-  };
+    const { error } = await supabase.from("accounts").insert({
+      service_id: data.get("service_id") as string,
+      account_email: data.get("account_email") as string,
+      total_cost: Number(data.get("total_cost")),
+      user_capacity: Number(data.get("user_capacity")),
+      duration_days: Number(data.get("duration_days")),
+      start_date: data.get("start_date") as string,
+      notes: data.get("notes") as string,
+    })
+
+    if (!error) {
+      toast({ title: "Éxito", description: "Nueva cuenta creada." })
+      setOpen(false)
+      router.refresh()
+    } else {
+      if (error.code === '23505') { 
+          toast({ title: "Error", description: "Ya existe una cuenta activa para este servicio con el mismo email.", variant: "destructive" })
+      } else {
+          toast({ title: "Error", description: "No se pudo crear la cuenta.", variant: "destructive" })
+      }
+      console.error("Error creating account:", error)
+    }
+  }
 
   const handleReactivate = async () => {
     if (!existingAccount || !formData) return;
     setLoading(true);
 
-    // --- CORRECCIÓN CLAVE AQUÍ ---
-    // 1. Antes de reactivar, eliminamos todos los usuarios antiguos asociados a esa cuenta.
     const { error: deleteError } = await supabase
         .from("account_users")
         .delete()
@@ -81,7 +101,6 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
         return;
     }
 
-    // 2. Ahora, reactivamos y actualizamos la cuenta.
     const { error: updateError } = await supabase
       .from("accounts")
       .update({
@@ -100,7 +119,7 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
     setShowReactivateDialog(false);
 
     if (!updateError) {
-      toast({ title: "Cuenta Reactivada", description: "La cuenta ha sido restaurada y sus usuarios anteriores eliminados." });
+      toast({ title: "Cuenta Reactivada", description: "La cuenta archivada ha sido restaurada y actualizada." });
       setOpen(false);
       router.refresh();
     } else {
