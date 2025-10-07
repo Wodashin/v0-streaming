@@ -27,7 +27,7 @@ export function RegisterPaymentDialog({ account, children }: RegisterPaymentDial
 
   const handleOpenPaymentModal = (user: AccountUser) => {
     setSelectedUser(user);
-    const suggestedPrice = (account.total_cost || 0) / (account.user_capacity || 1);
+    const suggestedPrice = Math.round((account.total_cost || 0) / (account.user_capacity || 1));
     setAmount(suggestedPrice > 0 ? suggestedPrice : 0);
   };
 
@@ -35,18 +35,20 @@ export function RegisterPaymentDialog({ account, children }: RegisterPaymentDial
     if (!selectedUser) return;
 
     setLoadingUserId(selectedUser.id);
-    
     const supabase = createClient();
 
+    // --- CORRECCIÓN CLAVE ---
+    // Usamos 'selectedUser.customer_id' que es el ID correcto de la tabla 'customers'
     const { error: paymentError } = await supabase.from("payments").insert({
       account_id: account.id,
-      user_id: selectedUser.id,
+      user_id: selectedUser.customer_id, 
       amount: amount,
       payment_date: new Date().toISOString().split("T")[0],
     });
 
     if (paymentError) {
-      toast({ title: "Error", description: "No se pudo registrar el pago.", variant: "destructive" });
+      toast({ title: "Error", description: "No se pudo registrar el pago. Revisa la consola.", variant: "destructive" });
+      console.error("Error creating payment:", paymentError);
       setLoadingUserId(null);
       return;
     }
@@ -59,7 +61,7 @@ export function RegisterPaymentDialog({ account, children }: RegisterPaymentDial
     if (userError) {
         toast({ title: "Advertencia", description: "Pago registrado, pero no se pudo actualizar el estado del usuario." });
     } else {
-        toast({ title: "¡Pago Registrado!", description: `Pago de ${selectedUser.user_name} registrado por $${amount.toFixed(2)}.` });
+        toast({ title: "¡Pago Registrado!", description: `Pago de ${selectedUser.user_name} registrado por $${amount.toLocaleString('es-CL')}.` });
     }
 
     setLoadingUserId(null);
@@ -78,7 +80,7 @@ export function RegisterPaymentDialog({ account, children }: RegisterPaymentDial
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-3 max-h-96 overflow-y-auto">
-            {account.account_users && account.account_users.length > 0 ? (
+            {(account.account_users && account.account_users.length > 0) ? (
                 account.account_users.map(user => (
                     <div key={user.id} className="flex items-center justify-between rounded-md border p-3">
                         <div>
@@ -110,9 +112,9 @@ export function RegisterPaymentDialog({ account, children }: RegisterPaymentDial
                 <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
                         <Label htmlFor="amount">Monto Pagado</Label>
-                        <Input id="amount" type="number" step="0.01" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
+                        <Input id="amount" type="number" step="1" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
                         <p className="text-xs text-muted-foreground">
-                            Costo total de la cuenta: **${(account.total_cost || 0).toFixed(2)}**
+                            Costo total de la cuenta: **${(account.total_cost || 0).toLocaleString('es-CL')}**
                         </p>
                     </div>
                 </div>
