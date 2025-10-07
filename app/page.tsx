@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import Link from "next/link" // <-- Asegúrate de que Link esté importado
+import Link from "next/link"
 import { AccountsTable } from "@/components/accounts-table"
 import { StatsCards } from "@/components/stats-cards"
 import { NotificationsPanel } from "@/components/notifications-panel"
@@ -10,27 +10,22 @@ import { AddCustomerDialog } from "@/components/add-customer-dialog"
 import { ManageServicesDialog } from "@/components/manage-services-dialog"
 import { UserSearchDialog } from "@/components/user-search-dialog"
 import { Button } from "@/components/ui/button"
-import { Plus, Users, Settings, LogOut, Landmark } from "lucide-react" // <-- Importa el ícono Landmark
+import { Plus, Users, Settings, LogOut, Landmark } from "lucide-react"
 import { InactiveUsersPanel } from "@/components/inactive-users-panel"
 import { DashboardCharts } from "@/components/dashboard-charts"
 
 export default async function Home() {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect("/auth/login")
-  }
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/auth/login")
 
   const { data: accounts } = await supabase
     .from("accounts")
     .select(`
       *,
       customers ( id, name, phone, email ),
-      streaming_services ( id, name, default_user_capacity ),
+      streaming_services ( * ),
       account_users ( * ),
       payments ( * )
     `)
@@ -48,11 +43,10 @@ export default async function Home() {
             <p className="text-muted-foreground mt-1">Gestiona tus cuentas de streaming y notificaciones</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {/* --- BOTÓN NUEVO AQUÍ --- */}
             <Button asChild variant="outline">
-              <Link href="/payments">
+              <Link href="/reports">
                 <Landmark className="h-4 w-4 mr-2" />
-                Historial de Pagos
+                Reporte Financiero
               </Link>
             </Button>
             <UserSearchDialog />
