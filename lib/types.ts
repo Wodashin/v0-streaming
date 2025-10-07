@@ -24,7 +24,7 @@ export interface Account {
   account_email: string | null
   account_password: string | null
   account_pin: string | null
-  total_cost?: number; // Costo total de la cuenta para el ciclo
+  total_cost?: number;
   notes: string | null
   user_capacity: number
   created_at: string
@@ -38,6 +38,7 @@ export interface Account {
 export interface AccountUser {
   id: string
   account_id: string
+  customer_id: string | null; // ID del registro en la tabla 'customers'
   user_name: string
   user_email: string | null
   user_phone: string | null
@@ -60,7 +61,7 @@ export interface Notification {
 export interface Payment {
     id: string;
     account_id: string;
-    user_id: string | null; // ID del 'customer' que pagó
+    user_id: string | null;
     amount: number;
     payment_date: string;
     payment_method: string | null;
