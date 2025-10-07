@@ -6,16 +6,15 @@ import { createClient } from "@/lib/supabase/client";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter, // <-- 1. IMPORTACIÓN AÑADIDA
+  DialogDescription, // <-- Se añade la importación que faltaba
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button"; // <-- Importar Button
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Clock } from "lucide-react";
 
 interface AccountHistoryDialogProps {
   account: Account;
@@ -23,7 +22,7 @@ interface AccountHistoryDialogProps {
 }
 
 export function AccountHistoryDialog({ account, children }: AccountHistoryDialogProps) {
-  const [open, setOpen] = useState(false); // <-- Añadido para controlar el estado
+  const [open, setOpen] = useState(false);
   const [history, setHistory] = useState<AccountHistoryEvent[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -92,7 +91,6 @@ export function AccountHistoryDialog({ account, children }: AccountHistoryDialog
             ))}
           </div>
         </ScrollArea>
-        {/* --- 2. BLOQUE AÑADIDO --- */}
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cerrar</Button>
         </DialogFooter>
