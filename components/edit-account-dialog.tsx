@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -23,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 interface EditAccountDialogProps {
   account: Account
-  customers: Customer[]
+  customers: Customer[] // Se mantiene por si se necesita en el futuro, pero no se usa en el form
   services: StreamingService[]
   children: React.ReactNode
 }
@@ -40,18 +39,14 @@ export function EditAccountDialog({ account, customers, services, children }: Ed
     const formData = new FormData(e.currentTarget)
     const supabase = createClient()
     
-    const customerId = formData.get("customer_id") as string;
-
     const { error } = await supabase
       .from("accounts")
       .update({
-        customer_id: customerId === "null" ? null : customerId,
+        // El campo customer_id ya no se actualiza desde aquí
         service_id: formData.get("service_id") as string,
         start_date: formData.get("start_date") as string,
         duration_days: Number.parseInt(formData.get("duration_days") as string),
         status: formData.get("status") as string,
-        // --- CORRECCIÓN AQUÍ ---
-        // Ahora actualiza los campos de credenciales correctos
         account_email: (formData.get("account_email") as string) || null,
         account_password: (formData.get("account_password") as string) || null,
         account_pin: (formData.get("account_pin") as string) || null,
@@ -77,25 +72,12 @@ export function EditAccountDialog({ account, customers, services, children }: Ed
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Editar Cuenta</DialogTitle>
-            <DialogDescription>Modifica los detalles de la cuenta</DialogDescription>
+            <DialogDescription>Modifica los detalles de la cuenta de streaming.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="customer_id">Cliente (Opcional)</Label>
-              <Select name="customer_id" defaultValue={account.customer_id || "null"}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un cliente (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="null">Sin cliente asignado</SelectItem>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name} - {customer.phone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            
+            {/* --- CAMBIO: SE ELIMINÓ EL SELECTOR DE CLIENTE --- */}
+
             <div className="grid gap-2">
               <Label htmlFor="service_id">Servicio</Label>
               <Select name="service_id" defaultValue={account.service_id} required>
@@ -129,8 +111,6 @@ export function EditAccountDialog({ account, customers, services, children }: Ed
               </Select>
             </div>
             
-            {/* --- CORRECCIÓN AQUÍ --- */}
-            {/* Se usan los nuevos campos de credenciales */}
             <div className="grid gap-2">
               <Label htmlFor="account_email">Email de la Cuenta</Label>
               <Input id="account_email" name="account_email" defaultValue={account.account_email || ""} placeholder="usuario@ejemplo.com" />
