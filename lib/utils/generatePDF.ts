@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// Definimos los tipos de datos que recibirá la función
+// Tipos de datos actualizados para recibir la información completa
 type Payment = {
   amount: number;
   payment_date: string;
@@ -45,42 +45,40 @@ export const generateFinancialReportPDF = (
       ['Ganancia Neta', { content: formatCurrency(profit), styles: { halign: 'right', fontStyle: 'bold' } }],
     ],
     theme: 'striped',
-    headStyles: { fillColor: [22, 163, 74] }, // Verde
+    headStyles: { fillColor: [22, 163, 74] },
   });
 
-  // 3. Tabla de Ingresos (Pagos de usuarios)
+  // --- CORRECCIÓN DE DISEÑO Y DATOS ---
+
+  // 3. Título y Tabla de Ingresos
+  doc.setFontSize(16);
+  doc.text('Detalle de Ingresos', 14, (doc as any).lastAutoTable.finalY + 15);
   autoTable(doc, {
-    startY: (doc as any).lastAutoTable.finalY + 15,
+    startY: (doc as any).lastAutoTable.finalY + 20,
     head: [['Fecha', 'Usuario', 'Servicio', 'Monto']],
     body: payments.map(p => [
       formatDate(p.payment_date),
-      p.customers?.name || 'N/A',
-      p.accounts?.streaming_services?.name || 'N/A',
+      p.customers?.name || 'N/A', // <-- Muestra el nombre del usuario
+      p.accounts?.streaming_services?.name || 'N/A', // <-- Muestra el nombre del servicio
       { content: formatCurrency(p.amount), styles: { halign: 'right' } }
     ]),
     theme: 'grid',
-    headStyles: { fillColor: [37, 99, 235] }, // Azul
-    didDrawPage: (data) => {
-        doc.setFontSize(16);
-        doc.text('Detalle de Ingresos', 14, data.cursor.y - 10);
-    },
+    headStyles: { fillColor: [37, 99, 235] },
   });
 
-  // 4. Tabla de Gastos (Costos de cuentas)
+  // 4. Título y Tabla de Gastos
+  doc.setFontSize(16);
+  doc.text('Detalle de Gastos', 14, (doc as any).lastAutoTable.finalY + 15);
   autoTable(doc, {
-    startY: (doc as any).lastAutoTable.finalY + 15,
+    startY: (doc as any).lastAutoTable.finalY + 20,
     head: [['Fecha de Inicio', 'Servicio', 'Costo']],
     body: costs.map(c => [
         formatDate(c.start_date),
-        c.streaming_services?.name || 'N/A',
+        c.streaming_services?.name || 'N/A', // <-- Muestra el nombre del servicio
         { content: formatCurrency(c.total_cost || 0), styles: { halign: 'right' } }
     ]),
     theme: 'grid',
-    headStyles: { fillColor: [220, 38, 38] }, // Rojo
-    didDrawPage: (data) => {
-        doc.setFontSize(16);
-        doc.text('Detalle de Gastos', 14, data.cursor.y - 10);
-    },
+    headStyles: { fillColor: [220, 38, 38] },
   });
 
   // 5. Guardar el archivo
