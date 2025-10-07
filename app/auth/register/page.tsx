@@ -13,7 +13,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
+        <CardHeader className="text-center space-y-2">
           <Shield className="mx-auto h-8 w-8" />
           <CardTitle className="text-2xl font-bold">Crear Cuenta de Administrador</CardTitle>
           <CardDescription>Completa el formulario para registrarte.</CardDescription>
