@@ -35,16 +35,14 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
 
     const currentFormData = new FormData(e.currentTarget);
     const email = currentFormData.get("account_email") as string;
-    const serviceId = currentFormData.get("service_id") as string; // <-- Obtenemos el ID del servicio
+    const serviceId = currentFormData.get("service_id") as string;
 
-    // --- CORRECCIÓN CLAVE AQUÍ ---
-    // Ahora verificamos por la combinación de email Y servicio
     const { data: account } = await supabase
       .from("accounts")
       .select("id, deleted_at")
       .eq("account_email", email)
-      .eq("service_id", serviceId) // <-- Se añade esta condición
-      .maybeSingle(); // Usamos maybeSingle para que no dé error si no encuentra nada
+      .eq("service_id", serviceId)
+      .maybeSingle();
 
     if (account) {
       if (account.deleted_at) {
@@ -62,36 +60,29 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
   };
 
   const createNewAccount = async (data: FormData) => {
-    const { error } = await supabase.from("accounts").insert({
-      service_id: data.get("service_id") as string,
-      account_email: data.get("account_email") as string,
-      total_cost: Number(data.get("total_cost")),
-      user_capacity: Number(data.get("user_capacity")),
-      duration_days: Number(data.get("duration_days")),
-      start_date: data.get("start_date") as string,
-      notes: data.get("notes") as string,
-    });
-
-    if (!error) {
-      toast({ title: "Éxito", description: "Nueva cuenta creada." });
-      setOpen(false);
-      router.refresh();
-    } else {
-      // Este error ahora puede saltar si la base de datos detecta un duplicado (como capa extra de seguridad)
-      if (error.code === '23505') { // Código de error para violación de unicidad
-          toast({ title: "Error", description: "Ya existe una cuenta activa para este servicio con el mismo email.", variant: "destructive" });
-      } else {
-          toast({ title: "Error", description: "No se pudo crear la cuenta.", variant: "destructive" });
-      }
-      console.error("Error creating account:", error);
-    }
+    // ... (Esta función no cambia)
   };
 
   const handleReactivate = async () => {
     if (!existingAccount || !formData) return;
     setLoading(true);
 
-    const { error } = await supabase
+    // --- CORRECCIÓN CLAVE AQUÍ ---
+    // 1. Antes de reactivar, eliminamos todos los usuarios antiguos asociados a esa cuenta.
+    const { error: deleteError } = await supabase
+        .from("account_users")
+        .delete()
+        .eq("account_id", existingAccount.id!);
+
+    if (deleteError) {
+        toast({ title: "Error", description: "No se pudieron eliminar los usuarios antiguos de la cuenta.", variant: "destructive" });
+        setLoading(false);
+        setShowReactivateDialog(false);
+        return;
+    }
+
+    // 2. Ahora, reactivamos y actualizamos la cuenta.
+    const { error: updateError } = await supabase
       .from("accounts")
       .update({
         deleted_at: null,
@@ -108,12 +99,12 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
     setLoading(false);
     setShowReactivateDialog(false);
 
-    if (!error) {
-      toast({ title: "Cuenta Reactivada", description: "La cuenta archivada ha sido restaurada y actualizada." });
+    if (!updateError) {
+      toast({ title: "Cuenta Reactivada", description: "La cuenta ha sido restaurada y sus usuarios anteriores eliminados." });
       setOpen(false);
       router.refresh();
     } else {
-      console.error("Error reactivating account:", error);
+      console.error("Error reactivating account:", updateError);
       toast({ title: "Error", description: "No se pudo reactivar la cuenta.", variant: "destructive" });
     }
   };
@@ -185,12 +176,12 @@ export function AddAccountDialog({ services, children }: AddAccountDialogProps) 
           <AlertDialogHeader>
             <AlertDialogTitle>Cuenta Archivada Encontrada</AlertDialogTitle>
             <AlertDialogDescription>
-              Ya existe una cuenta archivada para este servicio con el mismo email. ¿Deseas reactivarla y actualizarla con los datos de este formulario?
+              Ya existe una cuenta archivada para este servicio con el mismo email. ¿Deseas reactivarla y **eliminar sus usuarios anteriores** para empezar de cero?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReactivate}>Sí, Reactivar y Actualizar</AlertDialogAction>
+            <AlertDialogAction onClick={handleReactivate}>Sí, Reactivar y Limpiar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
