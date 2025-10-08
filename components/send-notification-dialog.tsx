@@ -35,7 +35,7 @@ interface SendResult {
 export function SendNotificationDialog({ account, children }: SendNotificationDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState("")
+  const [message, setMessage] = useState("") // Usado solo para la previsualización
   const [results, setResults] = useState<SendResult[]>([])
   const [selectedUsers, setSelectedUsers] = useState<AccountUser[]>([])
   const router = useRouter()
@@ -49,31 +49,40 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
       setResults([]);
       const daysLeft = getDaysUntilExpiration(account.expiration_date);
       const serviceName = account.streaming_services?.name || "tu servicio";
+      
+      // Texto para la previsualización
       const baseMessage = daysLeft <= 0
-        ? `Tu cuenta de ${serviceName} ha vencido. Contáctanos para renovar.`
-        : `Tu cuenta de ${serviceName} vence en ${daysLeft} día${daysLeft !== 1 ? "s" : ""}. Recuerda renovarla.`;
-
-      setMessage(`Hola, ${baseMessage}`);
+        ? `Recordatorio: Tu cuenta de ${serviceName} ha vencido.`
+        : `Recordatorio: Tu cuenta de ${serviceName} vencerá en ${daysLeft} día(s).`;
+      
+      setMessage(baseMessage);
     }
   }
 
   const handleSend = async () => {
-    if (selectedUsers.length === 0) {
-      alert("Por favor, selecciona al menos un usuario para enviar la notificación.");
-      return;
-    }
-    setLoading(true)
-    setResults([])
-
+    if (selectedUsers.length === 0) return;
+    setLoading(true);
+    setResults([]);
+    
+    const daysLeft = getDaysUntilExpiration(account.expiration_date);
+    
     const sendPromises = selectedUsers.map(async (user) => {
       try {
-        const personalizedMessage = message.replace('Hola,', `Hola ${user.user_name},`);
-        const response = await fetch("/api/whatsapp/test", {
+        // Preparamos los datos para enviar la plantilla
+        const templateName = 'recordatorio_vencimiento_stream'; // El nombre de tu plantilla
+        const params = [
+          account.streaming_services?.name || 'tu servicio', // Parámetro {{1}}
+          daysLeft.toString()                               // Parámetro {{2}}
+        ];
+
+        // Llamamos a la API dedicada para enviar plantillas
+        const response = await fetch("/api/whatsapp/send-template", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             phone: user.user_phone,
-            message: personalizedMessage,
+            templateName: templateName,
+            params: params,
           }),
         });
 
@@ -81,7 +90,7 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
         return {
           phone: user.user_phone!,
           success: data.success,
-          message: data.success ? "Enviado con éxito" : (data.error || "Error desconocido"),
+          message: data.success ? "Plantilla enviada con éxito" : (data.error || "Error desconocido"),
         };
       } catch (error) {
         return {
@@ -119,10 +128,10 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
         <DialogHeader>
           <DialogTitle>Enviar Notificación Manual</DialogTitle>
           <DialogDescription>
-            Enviar mensaje de WhatsApp a los usuarios de la cuenta "{account.streaming_services?.name}"
+            Enviar un recordatorio de vencimiento a los usuarios de la cuenta "{account.streaming_services?.name}".
           </DialogDescription>
         </DialogHeader>
-
+        
         <div className="grid gap-4 py-4">
           {accountUsersWithPhone.length > 0 ? (
             <>
@@ -153,50 +162,44 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="message">Mensaje</Label>
+                <Label htmlFor="message">Previsualización del Mensaje (se enviará como plantilla)</Label>
                 <Textarea
                   id="message"
                   value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  rows={5}
-                  className="resize-none"
+                  readOnly
+                  rows={4}
+                  className="resize-none bg-muted text-muted-foreground"
                 />
-                <p className="text-xs text-muted-foreground">El saludo "Hola," se reemplazará por "Hola [Nombre de usuario]," para cada destinatario.</p>
+                 <p className="text-xs text-muted-foreground">Este es solo un ejemplo. El mensaje final será el de tu plantilla aprobada en WhatsApp.</p>
               </div>
+
+              {results.length > 0 && (
+                <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border p-2">
+                    <Label>Resultados del Envío</Label>
+                    {results.map((result, index) => (
+                        <Alert key={`${result.phone}-${index}`} variant={result.success ? 'default' : 'destructive'} className="flex items-center gap-2 text-xs">
+                            {result.success ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                            <AlertDescription>
+                                <strong>{result.phone}:</strong> {result.message}
+                            </AlertDescription>
+                        </Alert>
+                    ))}
+                </div>
+              )}
             </>
           ) : (
             <div className="py-8 text-center text-muted-foreground">
               <p>Esta cuenta no tiene usuarios con números de teléfono registrados para enviar notificaciones.</p>
             </div>
           )}
-
-          {/* CONTENEDOR DE RESULTADOS CORREGIDO */}
-          {results.length > 0 && (
-            <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border p-2">
-                <Label>Resultados del Envío</Label>
-                {results.map((result, index) => (
-                    <Alert key={`${result.phone}-${index}`} variant={result.success ? 'default' : 'destructive'} className="flex items-center gap-2 text-xs">
-                        {result.success ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-                        <AlertDescription>
-                            <strong>{result.phone}:</strong> {result.message}
-                        </AlertDescription>
-                    </Alert>
-                ))}
-            </div>
-          )}
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-            Cerrar
-          </Button>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cerrar</Button>
           {accountUsersWithPhone.length > 0 && (
             <Button onClick={handleSend} disabled={loading || selectedUsers.length === 0}>
               {loading ? "Enviando..." : `Enviar a ${selectedUsers.length} usuario(s)`}
             </Button>
           )}
         </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
+      </DialogContent
