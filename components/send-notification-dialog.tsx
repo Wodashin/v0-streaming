@@ -35,7 +35,7 @@ interface SendResult {
 export function SendNotificationDialog({ account, children }: SendNotificationDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState("") // Usado solo para la previsualización
+  const [message, setMessage] = useState("")
   const [results, setResults] = useState<SendResult[]>([])
   const [selectedUsers, setSelectedUsers] = useState<AccountUser[]>([])
   const router = useRouter()
@@ -50,7 +50,6 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
       const daysLeft = getDaysUntilExpiration(account.expiration_date);
       const serviceName = account.streaming_services?.name || "tu servicio";
       
-      // Texto para la previsualización
       const baseMessage = daysLeft <= 0
         ? `Recordatorio: Tu cuenta de ${serviceName} ha vencido.`
         : `Recordatorio: Tu cuenta de ${serviceName} vencerá en ${daysLeft} día(s).`;
@@ -68,14 +67,12 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
     
     const sendPromises = selectedUsers.map(async (user) => {
       try {
-        // Preparamos los datos para enviar la plantilla
-        const templateName = 'recordatorio_vencimiento_stream'; // El nombre de tu plantilla
+        const templateName = 'recordatorio_vencimiento_stream';
         const params = [
-          account.streaming_services?.name || 'tu servicio', // Parámetro {{1}}
-          daysLeft.toString()                               // Parámetro {{2}}
+          account.streaming_services?.name || 'tu servicio',
+          daysLeft.toString()
         ];
 
-        // Llamamos a la API dedicada para enviar plantillas
         const response = await fetch("/api/whatsapp/send-template", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -202,4 +199,7 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
             </Button>
           )}
         </DialogFooter>
-      </DialogContent
+      </DialogContent>
+    </Dialog>
+  )
+}
