@@ -34,8 +34,7 @@ export async function POST() {
           // --- ESTA ES LA PARTE QUE CAMBIA ---
           // 1. Determina el nombre de la plantilla a usar
           const templateName = notification.daysLeft === 1 
-            ? 'vencimiento_singular' // Debes crear esta plantilla para el caso de 1 día
-            : 'notificacion_vencimiento_dias'; // La que ya creaste
+            : 'recordatorio_vencimiento_stream'; // La que ya creaste
 
           // 2. Prepara los parámetros en el orden correcto {{1}}, {{2}}, {{3}}
           const params = [
