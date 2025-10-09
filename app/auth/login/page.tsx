@@ -84,12 +84,9 @@ export default function LoginPage() {
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
                 </Button>
-                <div className="text-center text-sm">
-                  <span className="text-muted-foreground">¿No tienes cuenta? </span>
-                  <Link href="/auth/register" className="text-blue-600 hover:underline font-medium">
-                    Crear cuenta
-                  </Link>
-                </div>
+                
+                {/* --- CAMBIO AQUÍ: Se eliminó el enlace a la página de registro --- */}
+
               </div>
             </form>
           </CardContent>
