@@ -49,11 +49,11 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
       setResults([]);
       const daysLeft = getDaysUntilExpiration(account.expiration_date);
       const serviceName = account.streaming_services?.name || "tu servicio";
-      
+
       const baseMessage = daysLeft <= 0
-        ? `Recordatorio: Tu cuenta de ${serviceName} ha vencido.`
-        : `Recordatorio: Tu cuenta de ${serviceName} vencerá en ${daysLeft} día(s).`;
-      
+        ? `Tu cuenta de ${serviceName} ha vencido hoy. Contáctanos para renovar.`
+        : `Tu cuenta de ${serviceName} vencerá en ${daysLeft} día(s). Renueva a tiempo.`;
+
       setMessage(baseMessage);
     }
   }
@@ -62,24 +62,23 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
     if (selectedUsers.length === 0) return;
     setLoading(true);
     setResults([]);
-    
+
     const daysLeft = getDaysUntilExpiration(account.expiration_date);
-    
+    const serviceName = account.streaming_services?.name || "tu servicio";
+
     const sendPromises = selectedUsers.map(async (user) => {
       try {
-        const templateName = 'recordatorio_vencimiento_stream';
-        const params = [
-          account.streaming_services?.name || 'tu servicio',
-          daysLeft.toString()
-        ];
+        const chatId = user.user_phone;
+        const telegramMessage = daysLeft <= 0
+          ? `🔴 <b>Cuenta vencida</b>\n\nHola <b>${user.user_name}</b>, tu cuenta de <b>${serviceName}</b> ha vencido hoy.\n\nContáctanos para renovar. 📲`
+          : `⚠️ <b>Recordatorio de vencimiento</b>\n\nHola <b>${user.user_name}</b>, tu cuenta de <b>${serviceName}</b> vence en <b>${daysLeft} día(s)</b>.\n\nRenueva a tiempo para no perder el acceso. 🎬`;
 
-        const response = await fetch("/api/whatsapp/send-template", {
+        const response = await fetch("/api/telegram/test", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            phone: user.user_phone,
-            templateName: templateName,
-            params: params,
+            chatId,
+            message: telegramMessage,
           }),
         });
 
@@ -87,7 +86,7 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
         return {
           phone: user.user_phone!,
           success: data.success,
-          message: data.success ? "Plantilla enviada con éxito" : (data.error || "Error desconocido"),
+          message: data.success ? "Mensaje enviado con éxito" : (data.error || "Error desconocido"),
         };
       } catch (error) {
         return {
@@ -128,7 +127,7 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
             Enviar un recordatorio de vencimiento a los usuarios de la cuenta "{account.streaming_services?.name}".
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="grid gap-4 py-4">
           {accountUsersWithPhone.length > 0 ? (
             <>
@@ -159,7 +158,7 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="message">Previsualización del Mensaje (se enviará como plantilla)</Label>
+                <Label htmlFor="message">Previsualización del mensaje</Label>
                 <Textarea
                   id="message"
                   value={message}
@@ -167,26 +166,26 @@ export function SendNotificationDialog({ account, children }: SendNotificationDi
                   rows={4}
                   className="resize-none bg-muted text-muted-foreground"
                 />
-                 <p className="text-xs text-muted-foreground">Este es solo un ejemplo. El mensaje final será el de tu plantilla aprobada en WhatsApp.</p>
+                <p className="text-xs text-muted-foreground">El mensaje se enviará por Telegram al Chat ID guardado en el campo teléfono del usuario.</p>
               </div>
 
               {results.length > 0 && (
                 <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border p-2">
-                    <Label>Resultados del Envío</Label>
-                    {results.map((result, index) => (
-                        <Alert key={`${result.phone}-${index}`} variant={result.success ? 'default' : 'destructive'} className="flex items-center gap-2 text-xs">
-                            {result.success ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-                            <AlertDescription>
-                                <strong>{result.phone}:</strong> {result.message}
-                            </AlertDescription>
-                        </Alert>
-                    ))}
+                  <Label>Resultados del Envío</Label>
+                  {results.map((result, index) => (
+                    <Alert key={`${result.phone}-${index}`} variant={result.success ? 'default' : 'destructive'} className="flex items-center gap-2 text-xs">
+                      {result.success ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                      <AlertDescription>
+                        <strong>{result.phone}:</strong> {result.message}
+                      </AlertDescription>
+                    </Alert>
+                  ))}
                 </div>
               )}
             </>
           ) : (
             <div className="py-8 text-center text-muted-foreground">
-              <p>Esta cuenta no tiene usuarios con números de teléfono registrados para enviar notificaciones.</p>
+              <p>Esta cuenta no tiene usuarios con Chat ID de Telegram registrado en el campo teléfono.</p>
             </div>
           )}
         </div>
